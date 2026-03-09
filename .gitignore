@@ -1,0 +1,20 @@
+# IDE
+.classpath
+.project
+.settings/
+bin/
+target/
+
+# Eclipse
+*.class
+*.jar
+*.war
+*.log
+
+# 数据库连接配置
+*.properties
+!db.properties.example
+
+# 其他
+lib/
+screenshots/
