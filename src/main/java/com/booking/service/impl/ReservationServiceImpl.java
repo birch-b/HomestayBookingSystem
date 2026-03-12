@@ -1,4 +1,4 @@
-package com.booking.service.Impl;
+package com.booking.service.impl;
 
 import com.booking.dao.*;
 import com.booking.dao.impl.*;
@@ -111,48 +111,22 @@ public class ReservationServiceImpl implements ReservationService{
 
     @Override
     public boolean cancelReservation(int reservationId) {
-        Connection conn = null;
-        try {
-            conn=DBUtil.getConnection();
-            conn.setAutoCommit(false);
-            // 1. 获取订单信息
-            Reservation reservation=reservationDAO.selectById(reservationId);
-            if (reservation==null){
-                conn.rollback();
-            }
-            // 2. 检查是否可以取消（只有PENDING和PAID可以取消）
-            String status = reservation.getStatus();
-            if (!"PENDING".equals(status) && !"PAID".equals(status)) {
-                return false;
-            }
-
-            // 3. 调用DAO的取消方法（包含事务）
-            int result = reservationDAO.cancelReservation(reservationId);
-
-            if (result > 0) {
-                conn.commit();
-                return true;
-            } else {
-                conn.rollback();
-                return false;
-            }
-
-        } catch (SQLException e) {
-            try {
-                if (conn != null){
-                    conn.rollback();
-                    return false;
-                }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
-            e.printStackTrace();
+        // 1. 获取订单信息
+        Reservation reservation = reservationDAO.selectById(reservationId);
+        if (reservation == null) {
             return false;
-        } finally {
-            DBUtil.closeConnection();
         }
-    }
 
+        // 2. 检查是否可以取消（只有PENDING和PAID可以取消）
+        String status = reservation.getStatus();
+        if (!"PENDING".equals(status) && !"PAID".equals(status)) {
+            return false;
+        }
+
+        // 3. 调用DAO的取消方法（DAO内部处理事务）
+        int result = reservationDAO.cancelReservation(reservationId);
+        return result > 0;
+    }
 
     @Override
     public boolean paymentSuccess(int reservationId, String transactionId) {

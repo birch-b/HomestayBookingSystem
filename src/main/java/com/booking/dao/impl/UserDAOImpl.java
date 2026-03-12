@@ -338,6 +338,120 @@ public class UserDAOImpl implements UserDAO {
         }
     }
 
+    @Override
+    public List<User> selectByRealName(String realName) {
+        String sql = "SELECT * FROM users WHERE real_name = ? ORDER BY user_id";
+        List<User> list = new ArrayList<>();
+        Connection conn;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DBUtil.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, realName);
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                list.add(extractUserFromResultSet(rs));
+            }
+            return list;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return list;
+        } finally {
+            DBUtil.closeResultSet(rs);
+            if (pstmt != null) {
+                DBUtil.closeStatement(pstmt);
+            }
+        }
+    }
+
+    @Override
+    public int countByRealName(String realName) {
+        String sql = "SELECT COUNT(*) FROM users WHERE real_name = ?";
+        Connection conn;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DBUtil.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, realName);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            return 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
+        } finally {
+            DBUtil.closeResultSet(rs);
+            if (pstmt != null) {
+                DBUtil.closeStatement(pstmt);
+            }
+        }
+    }
+
+    @Override
+    public boolean isUsernameExists(String username) {
+        String sql = "SELECT COUNT(*) FROM users WHERE username = ?";
+        Connection conn;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DBUtil.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, username);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+            return false;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            DBUtil.closeResultSet(rs);
+            if (pstmt != null) {
+                DBUtil.closeStatement(pstmt);
+            }
+        }
+    }
+
+    @Override
+    public boolean isUsernameExistsExcludeSelf(String username, int userId) {
+        String sql = "SELECT COUNT(*) FROM users WHERE username = ? AND user_id != ?";
+        Connection conn;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DBUtil.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, username);
+            pstmt.setInt(2, userId);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+            return false;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            DBUtil.closeResultSet(rs);
+            if (pstmt != null) {
+                DBUtil.closeStatement(pstmt);
+            }
+        }
+    }
+
     // ==================== 工具方法 ====================
 
     private User extractUserFromResultSet(ResultSet rs) throws SQLException {

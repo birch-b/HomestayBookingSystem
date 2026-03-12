@@ -18,6 +18,12 @@ public class CheckinRecord {
     private String remarks;             // 备注
     private Date createTime;            // 创建时间
 
+    // ============== 新增关联字段 ==============
+    private Reservation reservation;    // 关联的订单信息
+    private User guest;                 // 关联的客人信息
+    private Room room;                   // 关联的房间信息
+    private Homestay homestay;           // 关联的民宿信息
+
     // 无参构造
     public CheckinRecord() {
     }
@@ -93,5 +99,49 @@ public class CheckinRecord {
 
     public void setCreateTime(Date createTime) {
         this.createTime = createTime;
+    }
+
+    // ============== 新增关联字段的Getter/Setter ==============
+
+    public Reservation getReservation() {
+        return reservation;
+    }
+
+    public void setReservation(Reservation reservation) {
+        this.reservation = reservation;
+    }
+
+    public User getGuest() {
+        return guest;
+    }
+
+    public void setGuest(User guest) {
+        this.guest = guest;
+    }
+
+    public Room getRoom() {
+        return room;
+    }
+
+    public void setRoom(Room room) {
+        this.room = room;
+    }
+
+    public Homestay getHomestay() {
+        return homestay;
+    }
+
+    public void setHomestay(Homestay homestay) {
+        this.homestay = homestay;
+    }
+
+    @Override
+    public String toString() {
+        return "CheckinRecord{" +
+                "recordId=" + recordId +
+                ", reservationId=" + reservationId +
+                ", deposit=" + deposit +
+                ", depositReturn=" + depositReturn +
+                '}';
     }
 }

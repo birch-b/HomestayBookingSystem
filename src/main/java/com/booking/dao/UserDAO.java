@@ -30,4 +30,23 @@ public interface UserDAO extends BaseDAO<User> {
      * 更新最后登录时间
      */
     int updateLastLoginTime(int userId);
+    /**
+     * 根据真实姓名查询用户
+     */
+    List<User> selectByRealName(String realName);
+
+    /**
+     * 统计同名人数
+     */
+    int countByRealName(String realName);
+
+    /**
+     * 检查用户名是否存在
+     */
+    boolean isUsernameExists(String username);
+
+    /**
+     * 检查用户名是否存在（排除自己）
+     */
+    boolean isUsernameExistsExcludeSelf(String username, int userId);
 }
