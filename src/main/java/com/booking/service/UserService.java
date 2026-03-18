@@ -125,4 +125,11 @@ public interface UserService {
      * 统计各角色用户数量
      */
     int[] getRoleCounts();
+    /**
+     * 更新用户状态
+     * @param userId 用户ID
+     * @param status 1正常 0禁用
+     * @return true成功，false失败
+     */
+    boolean updateUserStatus(int userId, int status);
 }

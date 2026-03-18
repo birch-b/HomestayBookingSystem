@@ -7,9 +7,9 @@ import com.booking.util.AppColors;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
+// import java.awt.event.ActionEvent;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+// import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -19,7 +19,7 @@ import java.util.List;
 public class ReservationView extends JFrame {
 
     private User currentUser;
-    private List<Room> availableRooms;
+    // private List<Room> availableRooms;
 
     private JTextField cityField;
     private JTextField checkInField;
@@ -31,13 +31,16 @@ public class ReservationView extends JFrame {
     private JButton reserveButton;
     private JButton backButton;
     private JLabel selectedRoomLabel;
-
+    private com.booking.service.RoomService roomService;
+    private com.booking.service.ReservationService reservationService;
     private int selectedRoomId = -1;
     private String selectedRoomInfo = "";
 
     public ReservationView(User user) {
         this.currentUser = user;
-        this.availableRooms = new ArrayList<>();
+        // this.availableRooms = new ArrayList<>();
+        this.roomService = new com.booking.service.impl.RoomServiceImpl();
+        this.reservationService = new com.booking.service.impl.ReservationServiceImpl();
         initUI();
     }
 
@@ -228,7 +231,7 @@ public class ReservationView extends JFrame {
         backButton.addActionListener(e -> dispose());
 
         // 初始加载数据
-        loadTestData();
+        loadAvailableRooms();
     }
 
     private void styleButton(JButton button) {
@@ -260,68 +263,194 @@ public class ReservationView extends JFrame {
         return sdf.format(cal.getTime());
     }
 
-    private void loadTestData() {
-        tableModel.setRowCount(0);
-
-        Object[] row1 = {false, 1, "云中山居", "101", "大床房", 2, 388.00, "可用"};
-        Object[] row2 = {false, 2, "云中山居", "102", "大床房", 2, 428.00, "可用"};
-        Object[] row3 = {false, 3, "云中山居", "201", "标准间", 2, 388.00, "可用"};
-        Object[] row4 = {false, 4, "海边小筑", "A01", "海景房", 2, 588.00, "可用"};
-        Object[] row5 = {false, 5, "海边小筑", "B01", "套房", 2, 1288.00, "可用"};
-
-        tableModel.addRow(row1);
-        tableModel.addRow(row2);
-        tableModel.addRow(row3);
-        tableModel.addRow(row4);
-        tableModel.addRow(row5);
+  private void loadAvailableRooms() {
+    tableModel.setRowCount(0);
+    
+    // 获取所有可用房间
+    List<Room> availableRooms = roomService.getAvailableRooms();
+    
+    for (Room r : availableRooms) {
+        // 获取民宿名称（这里需要从HomestayService获取，暂时用ID代替）
+        String homestayName = "民宿" + r.getHomestayId();
+        
+        Object[] row = {
+            false,
+            r.getRoomId(),
+            homestayName,
+            r.getRoomNumber(),
+            getRoomTypeName(r.getRoomType()),
+            r.getMaxPeople(),
+            r.getPrice(),
+            getStatusName(r.getStatus())
+        };
+        tableModel.addRow(row);
     }
+}
+private String getRoomTypeName(String type) {
+    switch (type) {
+        case "SINGLE": return "单人间";
+        case "DOUBLE": return "大床房";
+        case "TWIN": return "双人间";
+        case "SUITE": return "套房";
+        case "FAMILY": return "家庭房";
+        default: return type;
+    }
+}
 
+private String getStatusName(String status) {
+    switch (status) {
+        case "AVAILABLE": return "可用";
+        case "BOOKED": return "已订";
+        case "MAINTENANCE": return "维护";
+        default: return status;
+    }
+}
     private void searchRooms() {
-        String city = cityField.getText().trim();
-        String checkIn = checkInField.getText().trim();
-        String checkOut = checkOutField.getText().trim();
-        String people = peopleField.getText().trim();
-
+    String city = cityField.getText().trim();
+    String checkInStr = checkInField.getText().trim();
+    String checkOutStr = checkOutField.getText().trim();
+    String peopleStr = peopleField.getText().trim();
         // TODO: 调用Service搜索可用房间
-        StringBuilder msg = new StringBuilder("搜索条件:\n");
-        msg.append("城市: ").append(city).append("\n");
-        msg.append("入住: ").append(checkIn).append("\n");
-        msg.append("离店: ").append(checkOut).append("\n");
-        msg.append("人数: ").append(people);
+        // 验证输入
+        if (city.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "请输入城市", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int peopleCount;
+        try {
+            peopleCount = Integer.parseInt(peopleStr);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "请输入正确的人数", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+     // 解析日期
+        Date checkIn, checkOut;
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            checkIn = sdf.parse(checkInStr);
+            checkOut = sdf.parse(checkOutStr);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "日期格式错误，请使用 yyyy-MM-dd 格式", 
+                                        "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-        JOptionPane.showMessageDialog(this, msg.toString(), "搜索功能待实现", JOptionPane.INFORMATION_MESSAGE);
-
-        // 演示：还是加载测试数据
-        loadTestData();
+    // 调用Service搜索可用房间
+        List<Room> searchResult = roomService.searchAvailableRooms(
+            city, checkIn, checkOut, peopleCount, 1, 100);
+    
+    // 更新表格
+         tableModel.setRowCount(0);
+        for (Room r : searchResult) {
+            String homestayName = "民宿" + r.getHomestayId();
+            
+            Object[] row = {
+                false,
+                r.getRoomId(),
+                homestayName,
+                r.getRoomNumber(),
+                getRoomTypeName(r.getRoomType()),
+                r.getMaxPeople(),
+                r.getPrice(),
+                getStatusName(r.getStatus())
+            };
+            tableModel.addRow(row);
+        }
+        if (searchResult.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "没有找到符合条件的房间", "提示", 
+                                        JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 
-    private void reserveRoom() {
-        if (selectedRoomId == -1) {
-            JOptionPane.showMessageDialog(this, "请先选择要预订的房间", "提示", JOptionPane.WARNING_MESSAGE);
-            return;
+  private void reserveRoom() {
+    if (selectedRoomId == -1) {
+        JOptionPane.showMessageDialog(this, "请先选择要预订的房间", "提示", 
+                                    JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    String checkInStr = checkInField.getText().trim();
+    String checkOutStr = checkOutField.getText().trim();
+    String peopleStr = peopleField.getText().trim();
+
+    if (checkInStr.isEmpty() || checkOutStr.isEmpty() || peopleStr.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "请填写完整的日期和人数", "提示", 
+                                    JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    try {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date checkIn = sdf.parse(checkInStr);
+        Date checkOut = sdf.parse(checkOutStr);
+        int guestsCount = Integer.parseInt(peopleStr);
+
+        // 获取选中房间的价格
+        double roomPrice = 0;
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            if ((int) tableModel.getValueAt(i, 1) == selectedRoomId) {
+                roomPrice = (double) tableModel.getValueAt(i, 6);
+                break;
+            }
         }
 
-        String checkIn = checkInField.getText().trim();
-        String checkOut = checkOutField.getText().trim();
-        String people = peopleField.getText().trim();
+        // 计算总价
+        long days = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24);
+        if (days <= 0) days = 1;
+        double totalPrice = roomPrice * days;
 
-        if (checkIn.isEmpty() || checkOut.isEmpty() || people.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "请填写完整的日期和人数", "提示", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+        // 创建预订对象
+        com.booking.model.Reservation reservation = new com.booking.model.Reservation();
+        reservation.setRoomId(selectedRoomId);
+        reservation.setGuestId(currentUser.getUserId());
+        reservation.setCheckInDate(checkIn);
+        reservation.setCheckOutDate(checkOut);
+        reservation.setGuestsCount(guestsCount);
+        reservation.setTotalPrice(totalPrice);
+        reservation.setGuestName(currentUser.getRealName());
+        reservation.setGuestPhone(currentUser.getPhone());
 
-        // TODO: 跳转到订单确认界面
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "确认预订以下房间？\n\n" +
-                        selectedRoomInfo + "\n" +
-                        "入住: " + checkIn + "\n" +
-                        "离店: " + checkOut + "\n" +
-                        "人数: " + people,
-                "确认预订", JOptionPane.YES_NO_OPTION);
+        // 创建支付对象（可选）
+        com.booking.model.Payment payment = new com.booking.model.Payment();
+        payment.setAmount(totalPrice);
+        payment.setPaymentMethod("WECHAT");
 
+        // 确认预订
+        String message = String.format(
+            "确认预订以下房间？\n\n" +
+            "房间: %s\n" +
+            "入住: %s\n" +
+            "离店: %s\n" +
+            "人数: %d\n" +
+            "天数: %d晚\n" +
+            "总价: %.2f元",
+            selectedRoomInfo, checkInStr, checkOutStr, guestsCount, days, totalPrice);
+
+        int confirm = JOptionPane.showConfirmDialog(this, message, "确认预订", 
+                                                  JOptionPane.YES_NO_OPTION);
+        
         if (confirm == JOptionPane.YES_OPTION) {
-            JOptionPane.showMessageDialog(this, "预订成功！（演示模式）", "成功", JOptionPane.INFORMATION_MESSAGE);
-            dispose();
+            int result = reservationService.createReservation(reservation, payment);
+            
+            if (result == 1) {
+                JOptionPane.showMessageDialog(this, 
+                    "预订成功！\n订单号: " + reservation.getReservationNo(), 
+                    "成功", JOptionPane.INFORMATION_MESSAGE);
+                dispose();
+            } else if (result == -1) {
+                JOptionPane.showMessageDialog(this, 
+                    "预订失败：房间已被预订", 
+                    "失败", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, 
+                    "预订失败：系统错误", 
+                    "失败", JOptionPane.ERROR_MESSAGE);
+            }
         }
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "输入数据错误: " + e.getMessage(), 
+                                    "错误", JOptionPane.ERROR_MESSAGE);
+    }
     }
 }

@@ -2,13 +2,15 @@ package com.booking.view;
 
 import com.booking.model.Room;
 import com.booking.model.User;
+import com.booking.service.RoomService;
+import com.booking.service.HomestayService;
+import com.booking.service.impl.RoomServiceImpl;
+import com.booking.service.impl.HomestayServiceImpl;
 import com.booking.util.AppColors;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -17,8 +19,10 @@ import java.util.List;
 public class RoomManageView extends JFrame {
 
     private User currentUser;
-    private int homestayId;  // 当前管理的民宿ID
-    private String homestayName;  // 当前管理的民宿名称
+    private int homestayId;
+    private String homestayName;
+    private RoomService roomService;
+    // private HomestayService homestayService;
     private List<Room> roomList;
 
     private JTable roomTable;
@@ -37,14 +41,15 @@ public class RoomManageView extends JFrame {
         this.currentUser = user;
         this.homestayId = homestayId;
         this.homestayName = homestayName;
-        this.roomList = new ArrayList<>();
+        this.roomService = new RoomServiceImpl();
+        // this.homestayService = new HomestayServiceImpl();
         initUI();
         loadData();
     }
 
     private void initUI() {
         setTitle("房间管理 - " + homestayName + " - " + currentUser.getRealName());
-        setSize(900, 550);
+        setSize(900, 600);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -59,11 +64,10 @@ public class RoomManageView extends JFrame {
 
         JLabel titleLabel = new JLabel("房间管理 - " + homestayName, JLabel.CENTER);
         titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 20));
-        titleLabel.setForeground(Color.BLACK);
+        titleLabel.setForeground(AppColors.PRIMARY_PURPLE);
 
         backButton = new JButton("返回民宿列表");
-        styleSmallButton(backButton);
-
+        styleButton(backButton);
         titlePanel.add(titleLabel, BorderLayout.CENTER);
         titlePanel.add(backButton, BorderLayout.EAST);
 
@@ -83,7 +87,7 @@ public class RoomManageView extends JFrame {
         typeFilter.setBackground(Color.WHITE);
 
         filterPanel.add(new JLabel("状态:"));
-        String[] statuses = {"全部", "可用", "已订", "维护"};
+        String[] statuses = {"全部", "AVAILABLE", "BOOKED", "MAINTENANCE"};
         statusFilter = new JComboBox<>(statuses);
         statusFilter.setFont(new Font("微软雅黑", Font.PLAIN, 14));
         statusFilter.setBackground(Color.WHITE);
@@ -135,7 +139,7 @@ public class RoomManageView extends JFrame {
         roomTable.setRowHeight(25);
         roomTable.getTableHeader().setFont(new Font("微软雅黑", Font.BOLD, 13));
         roomTable.getTableHeader().setBackground(AppColors.PRIMARY_PURPLE);
-        roomTable.getTableHeader().setForeground(Color.BLACK);
+        roomTable.getTableHeader().setForeground(Color.WHITE);
         roomTable.setSelectionBackground(AppColors.HOVER_PURPLE);
 
         // 设置列宽
@@ -161,21 +165,20 @@ public class RoomManageView extends JFrame {
 
         // 组装界面
         mainPanel.add(titlePanel, BorderLayout.NORTH);
-        mainPanel.add(topPanel, BorderLayout.CENTER);
-        mainPanel.add(scrollPane, BorderLayout.SOUTH);
+        mainPanel.add(topPanel, BorderLayout.NORTH);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
         add(mainPanel);
 
-        // 添加事件监听
+        // 事件监听
+        searchButton.addActionListener(e -> searchRooms());
         addButton.addActionListener(e -> addRoom());
         editButton.addActionListener(e -> editRoom());
         deleteButton.addActionListener(e -> deleteRoom());
         refreshButton.addActionListener(e -> loadData());
-        searchButton.addActionListener(e -> searchRoom());
         backButton.addActionListener(e -> {
             dispose();
-            // 返回民宿管理界面
             new HomestayManageView(currentUser).setVisible(true);
         });
     }
@@ -197,36 +200,58 @@ public class RoomManageView extends JFrame {
         });
     }
 
-    private void styleSmallButton(JButton button) {
-        button.setFont(new Font("微软雅黑", Font.PLAIN, 12));
-        button.setBackground(AppColors.BUTTON_PURPLE);
-        button.setForeground(Color.WHITE);
-        button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-    }
-
     private void loadData() {
-        // TODO: 从Service加载数据
         tableModel.setRowCount(0);
-
-        // 临时测试数据
-        Object[] row1 = {1, "101", "大床房", "1.8米大床", 25, 2, 388.00, "可用"};
-        Object[] row2 = {2, "102", "大床房", "1.8米大床", 28, 2, 428.00, "可用"};
-        Object[] row3 = {3, "201", "标准间", "1.2米双床", 30, 2, 388.00, "可用"};
-        Object[] row4 = {4, "301", "套房", "2米大床", 50, 3, 888.00, "已订"};
-        Object[] row5 = {5, "302", "家庭房", "1.8米+1.2米", 45, 4, 688.00, "可用"};
-
-        tableModel.addRow(row1);
-        tableModel.addRow(row2);
-        tableModel.addRow(row3);
-        tableModel.addRow(row4);
-        tableModel.addRow(row5);
-
+        
+        // 获取该民宿的所有房间
+        roomList = roomService.getRoomsByHomestayId(homestayId);
+        
+        for (Room r : roomList) {
+            Object[] row = {
+                r.getRoomId(),
+                r.getRoomNumber(),
+                getRoomTypeName(r.getRoomType()),
+                r.getBedType(),
+                r.getArea(),
+                r.getMaxPeople(),
+                r.getPrice(),
+                getStatusName(r.getStatus())
+            };
+            tableModel.addRow(row);
+        }
+        
         updateStats();
     }
 
+   private String getRoomTypeName(String type) {
+        switch (type) {
+            case "SINGLE": return "单人间";
+            case "DOUBLE": return "大床房";
+            case "TWIN": return "双人间";
+            case "SUITE": return "套房";
+            case "FAMILY": return "家庭房";
+            default: return type;
+        }
+    }
+   private String getStatusName(String status) {
+        switch (status) {
+            case "AVAILABLE": return "可用";
+            case "BOOKED": return "已订";
+            case "MAINTENANCE": return "维护";
+            default: return status;
+        }
+    }
+
+    // private String getStatusCode(String statusName) {
+    //     switch (statusName) {
+    //         case "可用": return "AVAILABLE";
+    //         case "已订": return "BOOKED";
+    //         case "维护": return "MAINTENANCE";
+    //         default: return statusName;
+    //     }
+    // }
+
     private void updateStats() {
-        // 更新底部统计信息
         int total = tableModel.getRowCount();
         int available = 0;
         int booked = 0;
@@ -239,28 +264,73 @@ public class RoomManageView extends JFrame {
             else if ("维护".equals(status)) maintenance++;
         }
 
-        JPanel bottomPanel = (JPanel) ((JPanel) getContentPane().getComponent(0)).getComponent(3);
-        JLabel statsLabel = (JLabel) bottomPanel.getComponent(0);
-        statsLabel.setText(String.format("总房间数: %d | 可用: %d | 已订: %d | 维护: %d",
-                total, available, booked, maintenance));
+        Container contentPane = getContentPane();
+        if (contentPane.getComponentCount() > 0) {
+            Component mainComp = contentPane.getComponent(0);
+            if (mainComp instanceof JPanel) {
+                JPanel mainPanel = (JPanel) mainComp;
+                int compCount = mainPanel.getComponentCount();
+                if (compCount > 0) {
+                    Component bottomComp = mainPanel.getComponent(compCount - 1);
+                    if (bottomComp instanceof JPanel) {
+                        JPanel bottomPanel = (JPanel) bottomComp;
+                        if (bottomPanel.getComponentCount() > 0) {
+                            Component labelComp = bottomPanel.getComponent(0);
+                            if (labelComp instanceof JLabel) {
+                                JLabel statsLabel = (JLabel) labelComp;
+                                statsLabel.setText(String.format("总房间数: %d | 可用: %d | 已订: %d | 维护: %d",
+                                        total, available, booked, maintenance));
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    private void searchRoom() {
+    private void searchRooms() {
         String keyword = searchField.getText().trim();
         String type = (String) typeFilter.getSelectedItem();
         String status = (String) statusFilter.getSelectedItem();
-
-        // TODO: 调用Service搜索
-        StringBuilder msg = new StringBuilder("搜索条件:\n");
-        if (!keyword.isEmpty()) msg.append("房间号: ").append(keyword).append("\n");
-        if (!"全部".equals(type)) msg.append("房型: ").append(type).append("\n");
-        if (!"全部".equals(status)) msg.append("状态: ").append(status);
-
-        JOptionPane.showMessageDialog(this, msg.toString(), "搜索功能待实现", JOptionPane.INFORMATION_MESSAGE);
+        
+        // 获取所有房间
+        List<Room> allRooms = roomService.getRoomsByHomestayId(homestayId);
+        
+        // 筛选
+        List<Room> filtered = allRooms.stream()
+            .filter(r -> keyword.isEmpty() || r.getRoomNumber().contains(keyword))
+            .filter(r -> "全部".equals(type) || getRoomTypeName(r.getRoomType()).equals(type))
+            .filter(r -> "全部".equals(status) || getStatusName(r.getStatus()).equals(status))
+            .toList();
+        
+        // 更新表格
+        tableModel.setRowCount(0);
+        for (Room r : filtered) {
+            Object[] row = {
+                r.getRoomId(),
+                r.getRoomNumber(),
+                getRoomTypeName(r.getRoomType()),
+                r.getBedType(),
+                r.getArea(),
+                r.getMaxPeople(),
+                r.getPrice(),
+                getStatusName(r.getStatus())
+            };
+            tableModel.addRow(row);
+        }
+        
+        updateStats();
     }
 
     private void addRoom() {
-        JOptionPane.showMessageDialog(this, "新增房间功能待实现", "提示", JOptionPane.INFORMATION_MESSAGE);
+        // 权限检查：只有民宿主和管理员可以添加
+        if ("GUEST".equals(currentUser.getRole())) {
+            JOptionPane.showMessageDialog(this, "您没有权限添加房间", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // TODO: 打开添加房间对话框
+        JOptionPane.showMessageDialog(this, "添加房间功能开发中", "提示", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void editRoom() {
@@ -269,10 +339,20 @@ public class RoomManageView extends JFrame {
             JOptionPane.showMessageDialog(this, "请先选择要编辑的房间", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        int id = (int) tableModel.getValueAt(row, 0);
+
+        // 权限检查
+        if ("GUEST".equals(currentUser.getRole())) {
+            JOptionPane.showMessageDialog(this, "您没有权限编辑房间", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int roomId = (int) tableModel.getValueAt(row, 0);
         String roomNumber = (String) tableModel.getValueAt(row, 1);
-        JOptionPane.showMessageDialog(this, "编辑房间 " + roomNumber + " (ID:" + id + ") 功能待实现",
-                "提示", JOptionPane.INFORMATION_MESSAGE);
+        
+        // TODO: 打开编辑房间对话框
+        JOptionPane.showMessageDialog(this, 
+            "编辑房间 " + roomNumber + " (ID:" + roomId + ")\n功能开发中", 
+            "提示", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void deleteRoom() {
@@ -282,13 +362,27 @@ public class RoomManageView extends JFrame {
             return;
         }
 
+        // 权限检查
+        if ("GUEST".equals(currentUser.getRole())) {
+            JOptionPane.showMessageDialog(this, "您没有权限删除房间", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int roomId = (int) tableModel.getValueAt(row, 0);
         String roomNumber = (String) tableModel.getValueAt(row, 1);
-        int confirm = JOptionPane.showConfirmDialog(this, "确定要删除房间 " + roomNumber + " 吗？",
+        
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "确定要删除房间 " + roomNumber + " 吗？",
                 "确认删除", JOptionPane.YES_NO_OPTION);
+                
         if (confirm == JOptionPane.YES_OPTION) {
-            tableModel.removeRow(row);
-            updateStats();
-            JOptionPane.showMessageDialog(this, "删除成功（演示模式）", "提示", JOptionPane.INFORMATION_MESSAGE);
+            boolean success = roomService.deleteRoom(roomId);
+            if (success) {
+                JOptionPane.showMessageDialog(this, "删除成功", "成功", JOptionPane.INFORMATION_MESSAGE);
+                loadData();
+            } else {
+                JOptionPane.showMessageDialog(this, "删除失败", "错误", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 }

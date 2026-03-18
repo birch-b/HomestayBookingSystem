@@ -22,6 +22,7 @@ public class SystemSettingsView extends JFrame {
     private JComboBox<String> themeCombo;
     private JButton saveButton;
     private JButton cancelButton;
+    private JButton backButton;
     
     private Properties configProps;
     private static final String CONFIG_FILE = "config.properties";
@@ -190,12 +191,15 @@ public class SystemSettingsView extends JFrame {
 
         saveButton = new JButton("保存设置");
         cancelButton = new JButton("取消");
+        backButton = new JButton("返回");
 
         styleButton(saveButton);
         styleButton(cancelButton);
+        styleButton(backButton);
 
         buttonPanel.add(saveButton);
         buttonPanel.add(cancelButton);
+        buttonPanel.add(backButton);
 
         // 组装界面
         mainPanel.add(titleLabel, BorderLayout.NORTH);
@@ -207,6 +211,7 @@ public class SystemSettingsView extends JFrame {
         // 事件监听
         saveButton.addActionListener(e -> saveSettings());
         cancelButton.addActionListener(e -> dispose());
+        backButton.addActionListener(e -> dispose());
     }
 
     private void styleButton(JButton button) {

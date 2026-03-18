@@ -1,14 +1,17 @@
 package com.booking.view;
 
+import com.booking.model.Review;
 import com.booking.model.User;
+import com.booking.service.ReviewService;
+import com.booking.service.impl.ReviewServiceImpl;
 import com.booking.util.AppColors;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+// import java.util.Date;
+import java.util.List;
 
 /**
  * 评价管理界面
@@ -18,6 +21,7 @@ public class ReviewView extends JFrame {
     private User currentUser;
     private String userRole; // ADMIN, HOST, GUEST
     private int targetId; // 如果是HOST则是homestayId，如果是GUEST则是userId
+    private ReviewService reviewService;
 
     private JTable reviewTable;
     private DefaultTableModel tableModel;
@@ -28,11 +32,13 @@ public class ReviewView extends JFrame {
     private JButton addButton; // 游客发表评价
     private JButton backButton;
     private JTextArea replyArea;
+    private JLabel statsLabel;
 
     public ReviewView(User user, String role, int id) {
         this.currentUser = user;
         this.userRole = role;
         this.targetId = id;
+        this.reviewService = new ReviewServiceImpl();
         initUI();
         loadData();
     }
@@ -60,14 +66,26 @@ public class ReviewView extends JFrame {
         titleLabel.setForeground(Color.BLACK);
 
         // 筛选面板
-        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 5));
         filterPanel.setBackground(AppColors.LIGHT_PURPLE);
 
-        filterPanel.add(new JLabel("评分:"));
+        JLabel ratingLabel = new JLabel("评分:");
+        ratingLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        ratingLabel.setForeground(Color.BLACK);
+        filterPanel.add(ratingLabel);
+        
         String[] ratings = {"全部", "5星", "4星", "3星", "2星", "1星"};
         ratingFilter = new JComboBox<>(ratings);
-        ratingFilter.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        ratingFilter.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        ratingFilter.setForeground(Color.BLACK);
         ratingFilter.setBackground(Color.WHITE);
+        filterPanel.add(ratingFilter);
+        
+        // 添加空白面板增加间距
+        JPanel spacer = new JPanel();
+        spacer.setPreferredSize(new Dimension(30, 10));
+        spacer.setBackground(AppColors.LIGHT_PURPLE);
+        filterPanel.add(spacer);
 
         searchButton = new JButton("搜索");
         refreshButton = new JButton("刷新");
@@ -75,7 +93,6 @@ public class ReviewView extends JFrame {
         styleButton(searchButton);
         styleButton(refreshButton);
 
-        filterPanel.add(ratingFilter);
         filterPanel.add(searchButton);
         filterPanel.add(refreshButton);
 
@@ -162,7 +179,7 @@ public class ReviewView extends JFrame {
         // 底部统计
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         bottomPanel.setBackground(AppColors.LIGHT_PURPLE);
-        JLabel statsLabel = new JLabel("总评价数: 0 | 平均评分: 0.0星");
+        statsLabel = new JLabel("总评价数: 0 | 平均评分: 0.0星");
         statsLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
         statsLabel.setForeground(AppColors.DARK_PURPLE);
         bottomPanel.add(statsLabel);
@@ -175,7 +192,7 @@ public class ReviewView extends JFrame {
         }
 
         mainPanel.add(titleLabel, BorderLayout.NORTH);
-        mainPanel.add(topPanel, BorderLayout.CENTER);
+        mainPanel.add(topPanel, BorderLayout.NORTH);
         mainPanel.add(centerPanel, BorderLayout.CENTER);
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
@@ -197,7 +214,7 @@ public class ReviewView extends JFrame {
     private void styleButton(JButton button) {
         button.setFont(new Font("微软雅黑", Font.PLAIN, 13));
         button.setBackground(AppColors.BUTTON_PURPLE);
-        button.setForeground(Color.WHITE);
+        button.setForeground(AppColors.DARK_PURPLE);
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
 
@@ -211,37 +228,85 @@ public class ReviewView extends JFrame {
         });
     }
 
+    // 修复1：将参数类型改为 int
+    private String getStatusName(int status) {
+        return status == 1 ? "显示" : "隐藏";
+    }
+
     private void loadData() {
-        // TODO: 从Service加载数据
         tableModel.setRowCount(0);
+
+        List<Review> reviewList = null;
+        
+        // 根据角色加载不同数据
+        switch (userRole) {
+            case "ADMIN":
+                // 管理员看所有评价（需要ReviewService提供此方法）
+                reviewList = reviewService.getLatestReviews(100);
+                break;
+            case "HOST":
+                // 民宿主看自己民宿的评价
+                reviewList = reviewService.getReviewsByHomestayId(targetId, 1, 100);
+                break;
+            case "GUEST":
+                // 游客看自己的评价
+                reviewList = reviewService.getReviewsByGuestId(targetId, 1, 100);
+                break;
+        }
+
+        if (reviewList == null) return;
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 
-        // 临时测试数据
-        if ("ADMIN".equals(userRole)) {
-            Object[] row1 = {1, "202603150001", "云中山居", "101", "张三", 5, "非常满意！房间干净，风景很好", "感谢您的评价！", sdf.format(new Date()), "显示"};
-            Object[] row2 = {2, "202603160002", "海边小筑", "A01", "李四", 4, "海景很棒，服务也很好", "", sdf.format(new Date()), "显示"};
-            Object[] row3 = {3, "202603170003", "山里人家", "201", "王五", 5, "体验很好，下次还会来", "谢谢支持！", sdf.format(new Date()), "显示"};
-            tableModel.addRow(row1);
-            tableModel.addRow(row2);
-            tableModel.addRow(row3);
-        } else if ("HOST".equals(userRole)) {
-            Object[] row1 = {1, "202603150001", "101", "张三", 5, "非常满意！房间干净，风景很好", "感谢您的评价！", sdf.format(new Date()), "显示"};
-            Object[] row2 = {2, "202603170003", "201", "王五", 5, "体验很好，下次还会来", "谢谢支持！", sdf.format(new Date()), "显示"};
-            tableModel.addRow(row1);
-            tableModel.addRow(row2);
-        } else if ("GUEST".equals(userRole)) {
-            Object[] row1 = {1, "202603150001", "云中山居", "101", 5, "非常满意！房间干净，风景很好", "感谢您的评价！", sdf.format(new Date()), "显示"};
-            Object[] row2 = {3, "202603170003", "山里人家", "201", 5, "体验很好，下次还会来", "谢谢支持！", sdf.format(new Date()), "显示"};
-            tableModel.addRow(row1);
-            tableModel.addRow(row2);
+        for (Review r : reviewList) {
+            // 根据角色不同，表格列不同
+            if ("ADMIN".equals(userRole)) {
+                Object[] row = {
+                    r.getReviewId(),
+                    "订单" + r.getReservationId(), // 需要改进：获取真实订单号
+                    "民宿" + r.getReservationId(), // 需要改进：获取真实民宿名
+                    "房间" + r.getReservationId(), // 需要改进：获取真实房间号
+                    "用户" + r.getGuestId(),       // 需要改进：获取真实用户名
+                    r.getRating(),
+                    r.getComment(),
+                    r.getHostReply() != null ? r.getHostReply() : "",
+                    r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : "",
+                    getStatusName(r.getStatus())   // 修复：传入 int
+                };
+                tableModel.addRow(row);
+            } else if ("HOST".equals(userRole)) {
+                Object[] row = {
+                    r.getReviewId(),
+                    "订单" + r.getReservationId(),
+                    "房间" + r.getReservationId(),
+                    "用户" + r.getGuestId(),
+                    r.getRating(),
+                    r.getComment(),
+                    r.getHostReply() != null ? r.getHostReply() : "",
+                    r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : "",
+                    getStatusName(r.getStatus())   // 修复：传入 int
+                };
+                tableModel.addRow(row);
+            } else if ("GUEST".equals(userRole)) {
+                Object[] row = {
+                    r.getReviewId(),
+                    "订单" + r.getReservationId(),
+                    "民宿" + r.getReservationId(),
+                    "房间" + r.getReservationId(),
+                    r.getRating(),
+                    r.getComment(),
+                    r.getHostReply() != null ? r.getHostReply() : "",
+                    r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : "",
+                    getStatusName(r.getStatus())   // 修复：传入 int
+                };
+                tableModel.addRow(row);
+            }
         }
 
-//        updateStats();
+        updateStats();
     }
 
     private void updateStats() {
-        // 只计算统计数据，不更新界面
         int total = tableModel.getRowCount();
         double totalRating = 0;
         int ratingCount = 0;
@@ -260,11 +325,95 @@ public class ReviewView extends JFrame {
         }
 
         double avgRating = ratingCount > 0 ? totalRating / ratingCount : 0;
-        System.out.println("评价统计: 总数=" + total + ", 平均分=" + avgRating);
+        statsLabel.setText(String.format("总评价数: %d | 平均评分: %.1f星", total, avgRating));
     }
+
     private void searchReviews() {
         String rating = (String) ratingFilter.getSelectedItem();
-        JOptionPane.showMessageDialog(this, "搜索评分: " + rating, "搜索功能待实现", JOptionPane.INFORMATION_MESSAGE);
+        
+        List<Review> searchResult = null;
+        
+        if (!"全部".equals(rating)) {
+            // 解析评分值，从"5星"格式中提取数字
+            int ratingValue = Integer.parseInt(rating.substring(0, 1));
+            // 根据角色获取不同数据后再筛选
+            switch (userRole) {
+                case "ADMIN":
+                    searchResult = reviewService.getLatestReviews(100);
+                    break;
+                case "HOST":
+                    searchResult = reviewService.getReviewsByHomestayId(targetId, 1, 100);
+                    break;
+                case "GUEST":
+                    searchResult = reviewService.getReviewsByGuestId(targetId, 1, 100);
+                    break;
+            }
+            
+            if (searchResult != null) {
+                int finalRatingValue = ratingValue;
+                searchResult.removeIf(r -> r.getRating() != finalRatingValue);
+            }
+        } else {
+            // 重新加载所有数据
+            loadData();
+            return;
+        }
+
+        // 更新表格
+        tableModel.setRowCount(0);
+        if (searchResult != null && !searchResult.isEmpty()) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+            for (Review r : searchResult) {
+                if ("ADMIN".equals(userRole)) {
+                    Object[] row = {
+                        r.getReviewId(),
+                        "订单" + r.getReservationId(),
+                        "民宿" + r.getReservationId(),
+                        "房间" + r.getReservationId(),
+                        "用户" + r.getGuestId(),
+                        r.getRating(),
+                        r.getComment(),
+                        r.getHostReply() != null ? r.getHostReply() : "",
+                        r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : "",
+                        getStatusName(r.getStatus())   // 修复：传入 int
+                    };
+                    tableModel.addRow(row);
+                } else if ("HOST".equals(userRole)) {
+                    Object[] row = {
+                        r.getReviewId(),
+                        "订单" + r.getReservationId(),
+                        "房间" + r.getReservationId(),
+                        "用户" + r.getGuestId(),
+                        r.getRating(),
+                        r.getComment(),
+                        r.getHostReply() != null ? r.getHostReply() : "",
+                        r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : "",
+                        getStatusName(r.getStatus())   // 修复：传入 int
+                    };
+                    tableModel.addRow(row);
+                } else if ("GUEST".equals(userRole)) {
+                    Object[] row = {
+                        r.getReviewId(),
+                        "订单" + r.getReservationId(),
+                        "民宿" + r.getReservationId(),
+                        "房间" + r.getReservationId(),
+                        r.getRating(),
+                        r.getComment(),
+                        r.getHostReply() != null ? r.getHostReply() : "",
+                        r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : "",
+                        getStatusName(r.getStatus())   // 修复：传入 int
+                    };
+                    tableModel.addRow(row);
+                }
+            }
+        } else {
+            // 显示无数据提示
+            JOptionPane.showMessageDialog(this, "未找到符合条件的评价", "提示", JOptionPane.INFORMATION_MESSAGE);
+            // 重置搜索框并返回全部数据
+            ratingFilter.setSelectedIndex(0); // 重置为"全部"
+            loadData(); // 重新加载所有数据
+        }
+        updateStats();
     }
 
     private void prepareReply() {
@@ -301,14 +450,22 @@ public class ReviewView extends JFrame {
             return;
         }
 
-        // TODO: 调用Service保存回复
-        tableModel.setValueAt(reply, row, 6);
-        JOptionPane.showMessageDialog(this, "回复成功！", "成功", JOptionPane.INFORMATION_MESSAGE);
-        replyArea.setText("");
+        int reviewId = (int) tableModel.getValueAt(row, 0);
+        
+        // 调用Service保存回复
+        boolean success = reviewService.replyReview(reviewId, reply);
+        
+        if (success) {
+            tableModel.setValueAt(reply, row, 6);
+            JOptionPane.showMessageDialog(this, "回复成功！", "成功", JOptionPane.INFORMATION_MESSAGE);
+            replyArea.setText("");
+            loadData(); // 重新加载数据
+        } else {
+            JOptionPane.showMessageDialog(this, "回复失败", "错误", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void addReview() {
-        // TODO: 选择可评价的订单（已完成未评价）
         JOptionPane.showMessageDialog(this, "发表评价功能待实现\n需要选择已完成且未评价的订单",
                 "提示", JOptionPane.INFORMATION_MESSAGE);
     }

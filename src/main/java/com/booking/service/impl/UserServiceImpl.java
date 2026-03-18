@@ -87,13 +87,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean deleteUser(int userId) {
-        // 软删除：将状态设为0
-        User user = userDAO.selectById(userId);
-        if (user == null) {
-            return false;
-        }
-        user.setStatus(0);
-        int result = userDAO.update(user);
+        // 硬删除：从数据库中彻底删除用户
+        int result = userDAO.deleteById(userId);
         return result > 0;
     }
 
@@ -234,4 +229,14 @@ public class UserServiceImpl implements UserService {
         counts[2] = userDAO.selectByRole("GUEST").size();  // 游客
         return counts;
     }
+    @Override
+public boolean updateUserStatus(int userId, int status) {
+    User user = userDAO.selectById(userId);
+    if (user == null) {
+        return false;
+    }
+    user.setStatus(status);
+    int result = userDAO.update(user);
+    return result > 0;
+}
 }
