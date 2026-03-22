@@ -31,6 +31,16 @@ public class UserManageView extends JFrame {
     private JButton disableButton;
     private JButton refreshButton;
     private JButton backButton;
+    
+    // 分页相关变量
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalPages = 1;
+    
+    // 添加这两个成员变量，保存组件引用
+    private JLabel statsLabel;  // 统计信息标签
+    private JTextField pageField;  // 当前页码输入框
+    private JLabel pageInfoLabel;  // 总页数标签
 
     public UserManageView(User user) {
         this.currentUser = user;
@@ -70,7 +80,7 @@ public class UserManageView extends JFrame {
         searchField.setForeground(Color.BLACK);
         searchField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
 
-        JLabel roleLabel = new JLabel("角色:");
+        JLabel roleLabel = new JLabel("用户名:");
         roleLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
         roleLabel.setForeground(Color.BLACK);
         searchPanel.add(roleLabel);
@@ -152,17 +162,61 @@ public class UserManageView extends JFrame {
         JScrollPane scrollPane = new JScrollPane(userTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(AppColors.PRIMARY_PURPLE));
 
-        // 底部统计
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        // 底部统计和分页
+        JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.setBackground(AppColors.LIGHT_PURPLE);
-        JLabel statsLabel = new JLabel("总用户数: 0 | 管理员: 0 | 民宿主: 0 | 游客: 0");
+        
+        // 统计信息 - 保存statsLabel的引用
+        JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        statsPanel.setBackground(AppColors.LIGHT_PURPLE);
+        statsLabel = new JLabel("总用户数: 0 | 管理员: 0 | 民宿主: 0 | 游客: 0");
         statsLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
         statsLabel.setForeground(Color.BLACK);
-        bottomPanel.add(statsLabel);
+        statsPanel.add(statsLabel);
+        
+        // 分页组件 - 保存分页组件的引用
+        JPanel paginationPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        paginationPanel.setBackground(AppColors.LIGHT_PURPLE);
+        
+        JButton firstPageButton = new JButton("首页");
+        JButton prevPageButton = new JButton("上一页");
+        pageField = new JTextField(5);  // 保存引用
+        pageField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        pageField.setHorizontalAlignment(JTextField.CENTER);
+        pageField.setText("1");
+        
+        pageInfoLabel = new JLabel("/ 1");  // 保存引用
+        pageInfoLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        pageInfoLabel.setForeground(Color.BLACK);
+        
+        JButton nextPageButton = new JButton("下一页");
+        JButton lastPageButton = new JButton("末页");
+        
+        styleButton(firstPageButton);
+        styleButton(prevPageButton);
+        styleButton(nextPageButton);
+        styleButton(lastPageButton);
+        
+        paginationPanel.add(firstPageButton);
+        paginationPanel.add(prevPageButton);
+        paginationPanel.add(new JLabel("第"));
+        paginationPanel.add(pageField);
+        paginationPanel.add(pageInfoLabel);
+        paginationPanel.add(new JLabel("页"));
+        paginationPanel.add(nextPageButton);
+        paginationPanel.add(lastPageButton);
+        
+        bottomPanel.add(statsPanel, BorderLayout.WEST);
+        bottomPanel.add(paginationPanel, BorderLayout.EAST);
+
+        // 修改布局：将标题和顶部面板合并到一个容器中
+        JPanel northContainer = new JPanel(new BorderLayout());
+        northContainer.setBackground(AppColors.LIGHT_PURPLE);
+        northContainer.add(titleLabel, BorderLayout.NORTH);
+        northContainer.add(topPanel, BorderLayout.CENTER);
 
         // 组装界面
-        mainPanel.add(titleLabel, BorderLayout.NORTH);
-        mainPanel.add(topPanel, BorderLayout.NORTH);
+        mainPanel.add(northContainer, BorderLayout.NORTH);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
@@ -177,6 +231,47 @@ public class UserManageView extends JFrame {
         disableButton.addActionListener(e -> disableUser());
         refreshButton.addActionListener(e -> loadData());
         backButton.addActionListener(e -> dispose());
+        
+        // 分页按钮事件 - 直接使用按钮变量，不需要再查找
+        firstPageButton.addActionListener(e -> {
+            if (currentPage > 1) {
+                loadData(1);
+            }
+        });
+        
+        prevPageButton.addActionListener(e -> {
+            if (currentPage > 1) {
+                loadData(currentPage - 1);
+            }
+        });
+        
+        nextPageButton.addActionListener(e -> {
+            if (currentPage < totalPages) {
+                loadData(currentPage + 1);
+            }
+        });
+        
+        lastPageButton.addActionListener(e -> {
+            if (currentPage < totalPages) {
+                loadData(totalPages);
+            }
+        });
+        
+        // 页码输入框事件
+        pageField.addActionListener(e -> {
+            try {
+                int page = Integer.parseInt(pageField.getText());
+                if (page >= 1 && page <= totalPages) {
+                    loadData(page);
+                } else {
+                    JOptionPane.showMessageDialog(this, "页码超出范围", "提示", JOptionPane.WARNING_MESSAGE);
+                    pageField.setText(String.valueOf(currentPage));
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "请输入有效的页码", "提示", JOptionPane.WARNING_MESSAGE);
+                pageField.setText(String.valueOf(currentPage));
+            }
+        });
     }
 
     private void styleButton(JButton button) {
@@ -198,9 +293,16 @@ public class UserManageView extends JFrame {
 
     private void loadData() {
         tableModel.setRowCount(0);
+        searchField.setText(""); // 清空搜索框
+        roleFilter.setSelectedIndex(0); // 重置角色筛选
+        currentPage = 1; // 重置到第一页
         
         // 从Service获取最新数据
-        userList = userService.getAllUsers(1, 100);
+        userList = userService.getAllUsers(currentPage, pageSize);
+        
+        // 计算总页数
+        long totalCount = userService.getTotalUserCount();
+        totalPages = (int) Math.ceil((double) totalCount / pageSize);
         
         for (User u : userList) {
             String status = u.getStatus() == 1 ? "正常" : "禁用";
@@ -221,6 +323,45 @@ public class UserManageView extends JFrame {
         }
         
         updateStats();
+        updatePaginationInfo();
+    }
+    
+    private void loadData(int page) {
+        tableModel.setRowCount(0);
+        currentPage = page;
+        
+        // 从Service获取指定页的数据
+        userList = userService.getAllUsers(currentPage, pageSize);
+        
+        for (User u : userList) {
+            String status = u.getStatus() == 1 ? "正常" : "禁用";
+            String createTime = u.getCreateTime() != null ? 
+                u.getCreateTime().toString().substring(0, 10) : "未知";
+            
+            Object[] row = {
+                u.getUserId(),
+                u.getUsername(),
+                u.getRealName(),
+                getRoleName(u.getRole()),
+                u.getPhone(),
+                u.getEmail(),
+                status,
+                createTime
+            };
+            tableModel.addRow(row);
+        }
+        
+        updatePaginationInfo();
+    }
+    
+    private void updatePaginationInfo() {
+        // 直接使用保存的引用更新分页信息
+        if (pageField != null) {
+            pageField.setText(String.valueOf(currentPage));
+        }
+        if (pageInfoLabel != null) {
+            pageInfoLabel.setText("/ " + totalPages);
+        }
     }
 
     private String getRoleName(String role) {
@@ -237,70 +378,72 @@ public class UserManageView extends JFrame {
         List<User> admins = userService.getAdminList();
         List<User> hosts = userService.getHostList();
         List<User> guests = userService.getGuestList();
+        int totalCount = admins.size() + hosts.size() + guests.size();
         
-        // 获取底部面板
-        Container contentPane = getContentPane();
-        if (contentPane.getComponentCount() > 0) {
-            Component mainComp = contentPane.getComponent(0);
-            if (mainComp instanceof JPanel) {
-                JPanel mainPanel = (JPanel) mainComp;
-                int compCount = mainPanel.getComponentCount();
-                if (compCount > 0) {
-                    Component bottomComp = mainPanel.getComponent(compCount - 1);
-                    if (bottomComp instanceof JPanel) {
-                        JPanel bottomPanel = (JPanel) bottomComp;
-                        if (bottomPanel.getComponentCount() > 0) {
-                            Component labelComp = bottomPanel.getComponent(0);
-                            if (labelComp instanceof JLabel) {
-                                JLabel statsLabel = (JLabel) labelComp;
-                                statsLabel.setText(String.format("总用户数: %d | 管理员: %d | 民宿主: %d | 游客: %d",
-                                        userList.size(), admins.size(), hosts.size(), guests.size()));
-                            }
-                        }
-                    }
-                }
-            }
+        // 直接使用保存的statsLabel引用更新文本
+        if (statsLabel != null) {
+            statsLabel.setText(String.format("总用户数: %d | 管理员: %d | 民宿主: %d | 游客: %d",
+                    totalCount, admins.size(), hosts.size(), guests.size()));
         }
     }
 
     private void searchUsers() {
-        String keyword = searchField.getText().trim();
+        String usernameKeyword = searchField.getText().trim();
         String role = (String) roleFilter.getSelectedItem();
         
-        // 调用Service搜索
-        List<User> searchResult = userService.searchUsers(keyword, 1, 100);
+        // 调用Service获取所有用户
+        List<User> allUsers = userService.getAllUsers(1, 100);
         
-        // 按角色筛选
-        if (!"全部".equals(role)) {
-            String roleCode = "";
-            switch (role) {
-                case "管理员": roleCode = "ADMIN"; break;
-                case "民宿主": roleCode = "HOST"; break;
-                case "游客": roleCode = "GUEST"; break;
+        // 按用户名和角色筛选
+        List<User> searchResult = new ArrayList<>();
+        for (User user : allUsers) {
+            // 按用户名筛选（包含关系）
+            if (user.getUsername().contains(usernameKeyword)) {
+                // 按角色筛选
+                if ("全部".equals(role)) {
+                    searchResult.add(user);
+                } else {
+                    String roleCode = "";
+                    switch (role) {
+                        case "管理员": roleCode = "ADMIN"; break;
+                        case "民宿主": roleCode = "HOST"; break;
+                        case "游客": roleCode = "GUEST"; break;
+                    }
+                    if (roleCode.equals(user.getRole())) {
+                        searchResult.add(user);
+                    }
+                }
             }
-            String finalRoleCode = roleCode;
-            searchResult.removeIf(u -> !finalRoleCode.equals(u.getRole()));
         }
         
         // 更新表格
         tableModel.setRowCount(0);
-        for (User u : searchResult) {
-            String status = u.getStatus() == 1 ? "正常" : "禁用";
-            Object[] row = {
-                u.getUserId(),
-                u.getUsername(),
-                u.getRealName(),
-                getRoleName(u.getRole()),
-                u.getPhone(),
-                u.getEmail(),
-                status,
-                u.getCreateTime() != null ? u.getCreateTime().toString().substring(0, 10) : ""
-            };
-            tableModel.addRow(row);
+        if (searchResult.isEmpty()) {
+            // 搜索不到数据，显示提示并清空搜索框
+            JOptionPane.showMessageDialog(this, "未找到符合条件的用户", "提示", JOptionPane.INFORMATION_MESSAGE);
+            searchField.setText(""); // 清空搜索框
+            // 重新加载所有用户数据
+            loadData();
+        } else {
+            for (User u : searchResult) {
+                String status = u.getStatus() == 1 ? "正常" : "禁用";
+                Object[] row = {
+                    u.getUserId(),
+                    u.getUsername(),
+                    u.getRealName(),
+                    getRoleName(u.getRole()),
+                    u.getPhone(),
+                    u.getEmail(),
+                    status,
+                    u.getCreateTime() != null ? u.getCreateTime().toString().substring(0, 10) : ""
+                };
+                tableModel.addRow(row);
+            }
         }
         
         updateStats();
     }
+
 
     private void addUser() {
         // 创建添加用户对话框

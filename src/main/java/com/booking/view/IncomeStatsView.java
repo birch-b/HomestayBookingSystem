@@ -31,6 +31,17 @@ public class IncomeStatsView extends JFrame {
     private JTable statsTable;
     private DefaultTableModel tableModel;
     private JLabel totalIncomeLabel;
+    
+    // 分页相关
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalPages = 1;
+    private JButton firstPageButton;
+    private JButton prevPageButton;
+    private JButton nextPageButton;
+    private JButton lastPageButton;
+    private JTextField pageInput;
+    private JLabel pageInfoLabel;
 
     public IncomeStatsView(User user) {
         this.currentUser = user;
@@ -105,6 +116,36 @@ public class IncomeStatsView extends JFrame {
         JScrollPane scrollPane = new JScrollPane(statsTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(AppColors.PRIMARY_PURPLE));
 
+        // 分页面板
+        JPanel paginationPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        paginationPanel.setBackground(AppColors.LIGHT_PURPLE);
+
+        firstPageButton = new JButton("首页");
+        prevPageButton = new JButton("上一页");
+        nextPageButton = new JButton("下一页");
+        lastPageButton = new JButton("末页");
+        pageInput = new JTextField(3);
+        pageInfoLabel = new JLabel("第 1 页 / 共 1 页");
+
+        styleButton(firstPageButton);
+        styleButton(prevPageButton);
+        styleButton(nextPageButton);
+        styleButton(lastPageButton);
+
+        pageInput.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        pageInput.setHorizontalAlignment(JTextField.CENTER);
+        pageInfoLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        pageInfoLabel.setForeground(AppColors.DARK_PURPLE);
+
+        paginationPanel.add(firstPageButton);
+        paginationPanel.add(prevPageButton);
+        paginationPanel.add(new JLabel("跳转到:"));
+        paginationPanel.add(pageInput);
+        paginationPanel.add(new JLabel("页"));
+        paginationPanel.add(pageInfoLabel);
+        paginationPanel.add(nextPageButton);
+        paginationPanel.add(lastPageButton);
+
         // 底部统计
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         bottomPanel.setBackground(AppColors.LIGHT_PURPLE);
@@ -119,9 +160,14 @@ public class IncomeStatsView extends JFrame {
         topPanel.add(titleLabel, BorderLayout.NORTH);
         topPanel.add(queryPanel, BorderLayout.SOUTH);
         
+        JPanel southPanel = new JPanel(new BorderLayout());
+        southPanel.setBackground(AppColors.LIGHT_PURPLE);
+        southPanel.add(paginationPanel, BorderLayout.NORTH);
+        southPanel.add(bottomPanel, BorderLayout.SOUTH);
+        
         mainPanel.add(topPanel, BorderLayout.NORTH);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
-        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+        mainPanel.add(southPanel, BorderLayout.SOUTH);
 
         add(mainPanel);
 
@@ -129,6 +175,13 @@ public class IncomeStatsView extends JFrame {
         queryButton.addActionListener(e -> queryStats());
         exportButton.addActionListener(e -> exportReport());
         backButton.addActionListener(e -> dispose());
+        
+        // 分页事件
+        firstPageButton.addActionListener(e -> goToFirstPage());
+        prevPageButton.addActionListener(e -> goToPrevPage());
+        nextPageButton.addActionListener(e -> goToNextPage());
+        lastPageButton.addActionListener(e -> goToLastPage());
+        pageInput.addActionListener(e -> goToPage());
     }
 
     private void styleButton(JButton button) {
@@ -156,12 +209,23 @@ public class IncomeStatsView extends JFrame {
     String monthStr = (String) monthCombo.getSelectedItem();
     
     List<Object[]> monthlyData;
+    double totalYearIncome = 0;
     
     if ("全部".equals(monthStr)) {
-        // 获取全年数据
+        // 获取全年数据（分页）
         monthlyData = paymentService.getMonthlyIncomeAll(year);
         
+        // 计算全年总收入
         for (Object[] data : monthlyData) {
+            totalYearIncome += (double) data[1];
+        }
+        
+        // 分页处理
+        int startIndex = (currentPage - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, monthlyData.size());
+        
+        for (int i = startIndex; i < endIndex; i++) {
+            Object[] data = monthlyData.get(i);
             int month = (int) data[0];
             double amount = (double) data[1];
             String dateStr = year + "-" + String.format("%02d", month);
@@ -175,6 +239,12 @@ public class IncomeStatsView extends JFrame {
             };
             tableModel.addRow(row);
         }
+        
+        // 计算总页数
+        totalPages = (monthlyData.size() + pageSize - 1) / pageSize;
+        
+        // 设置全年总收入
+        totalIncomeLabel.setText(String.format("总计收入: %.2f 元", totalYearIncome));
     } else {
         // 获取指定月份数据
         int month = Integer.parseInt(monthStr.replace("月", ""));
@@ -190,9 +260,9 @@ public class IncomeStatsView extends JFrame {
         cal.set(Calendar.SECOND, 59);
         Date endDate = cal.getTime();
         
-        // 获取该月支付记录
+        // 获取该月支付记录（分页）
         List<com.booking.model.Payment> payments = paymentService.getPaymentsByDateRange(
-            startDate, endDate, 1, 1000);
+            startDate, endDate, currentPage, pageSize);
         
         // 按日期分组统计
         java.util.Map<String, DailyStats> dailyStats = new java.util.HashMap<>();
@@ -226,9 +296,15 @@ public class IncomeStatsView extends JFrame {
             };
             tableModel.addRow(row);
         }
+        
+        // 计算总页数（根据实际数据量计算）
+        totalPages = (dateList.size() + pageSize - 1) / pageSize;
+        if (totalPages < 1) totalPages = 1;
+        
+        updateTotal();
     }
     
-    updateTotal();
+    updatePaginationInfo();
 }
 
 // 内部类
@@ -352,4 +428,54 @@ private void exportReport() {
     
     dialog.setVisible(true);
 }
+    
+    // 分页相关方法
+    private void updatePaginationInfo() {
+        pageInfoLabel.setText("第 " + currentPage + " 页 / 共 " + totalPages + " 页");
+        pageInput.setText(String.valueOf(currentPage));
+        
+        // 更新按钮状态
+        firstPageButton.setEnabled(currentPage > 1);
+        prevPageButton.setEnabled(currentPage > 1);
+        nextPageButton.setEnabled(currentPage < totalPages);
+        lastPageButton.setEnabled(currentPage < totalPages);
+    }
+    
+    private void goToFirstPage() {
+        currentPage = 1;
+        loadData();
+    }
+    
+    private void goToPrevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            loadData();
+        }
+    }
+    
+    private void goToNextPage() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            loadData();
+        }
+    }
+    
+    private void goToLastPage() {
+        currentPage = totalPages;
+        loadData();
+    }
+    
+    private void goToPage() {
+        try {
+            int page = Integer.parseInt(pageInput.getText().trim());
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                loadData();
+            } else {
+                JOptionPane.showMessageDialog(this, "页码超出范围", "提示", JOptionPane.WARNING_MESSAGE);
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "请输入有效的页码", "提示", JOptionPane.WARNING_MESSAGE);
+        }
+    }
 }

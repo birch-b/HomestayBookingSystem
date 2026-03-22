@@ -18,78 +18,7 @@ public class AdminView extends MainView {
 
     @Override
     protected void initMenu() {
-        JMenuBar menuBar = new JMenuBar();
-        menuBar.setBackground(AppColors.PRIMARY_PURPLE);
-        menuBar.setBorder(BorderFactory.createLineBorder(AppColors.PRIMARY_PURPLE));
-        menuBar.setPreferredSize(new Dimension(menuBar.getPreferredSize().width, 28));
-
-        // 用户管理菜单
-        JMenu userMenu = new JMenu("用户管理");
-        userMenu.setForeground(AppColors.DARK_PURPLE);
-        userMenu.setFont(new Font("微软雅黑", Font.BOLD, 12));
-
-        JMenuItem userListItem = new JMenuItem("用户列表");
-        JMenuItem addUserItem = new JMenuItem("添加用户");
-        styleMenuItem(userListItem);
-        styleMenuItem(addUserItem);
-
-        userMenu.add(userListItem);
-        userMenu.add(addUserItem);
-
-        // 民宿管理菜单
-        JMenu homestayMenu = new JMenu("民宿管理");
-        homestayMenu.setForeground(AppColors.DARK_PURPLE);
-        homestayMenu.setFont(new Font("微软雅黑", Font.BOLD, 12));
-
-        JMenuItem homestayListItem = new JMenuItem("民宿列表");
-        JMenuItem verifyItem = new JMenuItem("民宿审核");
-        styleMenuItem(homestayListItem);
-        styleMenuItem(verifyItem);
-
-        homestayMenu.add(homestayListItem);
-        homestayMenu.add(verifyItem);
-
-        // 统计菜单
-        JMenu statsMenu = new JMenu("数据统计");
-        statsMenu.setForeground(AppColors.DARK_PURPLE);
-        statsMenu.setFont(new Font("微软雅黑", Font.BOLD, 12));
-
-        JMenuItem userStatsItem = new JMenuItem("用户统计");
-        JMenuItem orderStatsItem = new JMenuItem("订单统计");
-        JMenuItem incomeStatsItem = new JMenuItem("收入统计");
-        styleMenuItem(userStatsItem);
-        styleMenuItem(orderStatsItem);
-        styleMenuItem(incomeStatsItem);
-
-        statsMenu.add(userStatsItem);
-        statsMenu.add(orderStatsItem);
-        statsMenu.add(incomeStatsItem);
-
-        // 系统菜单
-        JMenu systemMenu = new JMenu("系统");
-        systemMenu.setForeground(AppColors.DARK_PURPLE);
-        systemMenu.setFont(new Font("微软雅黑", Font.BOLD, 12));
-
-        JMenuItem exitItem = new JMenuItem("退出");
-        styleMenuItem(exitItem);
-        exitItem.addActionListener(e -> System.exit(0));
-        systemMenu.add(exitItem);
-
-        menuBar.add(userMenu);
-        menuBar.add(homestayMenu);
-        menuBar.add(statsMenu);
-        menuBar.add(systemMenu);
-
-        setJMenuBar(menuBar);
-
-        // ========== 添加菜单点击事件 ==========
-        userListItem.addActionListener(e -> openUserManage());
-        addUserItem.addActionListener(e -> openAddUser());
-        homestayListItem.addActionListener(e -> openHomestayManage());
-        verifyItem.addActionListener(e -> openHomestayVerify());
-        userStatsItem.addActionListener(e -> openUserStats());
-        orderStatsItem.addActionListener(e -> openOrderStats());
-        incomeStatsItem.addActionListener(e -> openIncomeStats());
+        // 移除导航栏
     }
 
     @Override

@@ -33,6 +33,17 @@ public class ReviewView extends JFrame {
     private JButton backButton;
     private JTextArea replyArea;
     private JLabel statsLabel;
+    
+    // 分页相关
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalPages = 1;
+    private JButton firstPageButton;
+    private JButton prevPageButton;
+    private JButton nextPageButton;
+    private JButton lastPageButton;
+    private JTextField pageInput;
+    private JLabel pageInfoLabel;
 
     public ReviewView(User user, String role, int id) {
         this.currentUser = user;
@@ -176,6 +187,36 @@ public class ReviewView extends JFrame {
             replyPanel.add(replyInputPanel, BorderLayout.CENTER);
         }
 
+        // 分页面板
+        JPanel paginationPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        paginationPanel.setBackground(AppColors.LIGHT_PURPLE);
+
+        firstPageButton = new JButton("首页");
+        prevPageButton = new JButton("上一页");
+        nextPageButton = new JButton("下一页");
+        lastPageButton = new JButton("末页");
+        pageInput = new JTextField(3);
+        pageInfoLabel = new JLabel("第 1 页 / 共 1 页");
+
+        styleButton(firstPageButton);
+        styleButton(prevPageButton);
+        styleButton(nextPageButton);
+        styleButton(lastPageButton);
+
+        pageInput.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        pageInput.setHorizontalAlignment(JTextField.CENTER);
+        pageInfoLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        pageInfoLabel.setForeground(AppColors.DARK_PURPLE);
+
+        paginationPanel.add(firstPageButton);
+        paginationPanel.add(prevPageButton);
+        paginationPanel.add(new JLabel("跳转到:"));
+        paginationPanel.add(pageInput);
+        paginationPanel.add(new JLabel("页"));
+        paginationPanel.add(pageInfoLabel);
+        paginationPanel.add(nextPageButton);
+        paginationPanel.add(lastPageButton);
+
         // 底部统计
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         bottomPanel.setBackground(AppColors.LIGHT_PURPLE);
@@ -191,10 +232,19 @@ public class ReviewView extends JFrame {
             centerPanel.add(replyPanel, BorderLayout.SOUTH);
         }
 
-        mainPanel.add(titleLabel, BorderLayout.NORTH);
-        mainPanel.add(topPanel, BorderLayout.NORTH);
+        JPanel northPanel = new JPanel(new BorderLayout());
+        northPanel.setBackground(AppColors.LIGHT_PURPLE);
+        northPanel.add(titleLabel, BorderLayout.NORTH);
+        northPanel.add(topPanel, BorderLayout.SOUTH);
+        
+        JPanel southPanel = new JPanel(new BorderLayout());
+        southPanel.setBackground(AppColors.LIGHT_PURPLE);
+        southPanel.add(paginationPanel, BorderLayout.NORTH);
+        southPanel.add(bottomPanel, BorderLayout.SOUTH);
+        
+        mainPanel.add(northPanel, BorderLayout.NORTH);
         mainPanel.add(centerPanel, BorderLayout.CENTER);
-        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+        mainPanel.add(southPanel, BorderLayout.SOUTH);
 
         add(mainPanel);
 
@@ -209,6 +259,13 @@ public class ReviewView extends JFrame {
         if ("GUEST".equals(userRole) && addButton != null) {
             addButton.addActionListener(e -> addReview());
         }
+        
+        // 分页事件
+        firstPageButton.addActionListener(e -> goToFirstPage());
+        prevPageButton.addActionListener(e -> goToPrevPage());
+        nextPageButton.addActionListener(e -> goToNextPage());
+        lastPageButton.addActionListener(e -> goToLastPage());
+        pageInput.addActionListener(e -> goToPage());
     }
 
     private void styleButton(JButton button) {
@@ -241,16 +298,16 @@ public class ReviewView extends JFrame {
         // 根据角色加载不同数据
         switch (userRole) {
             case "ADMIN":
-                // 管理员看所有评价（需要ReviewService提供此方法）
-                reviewList = reviewService.getLatestReviews(100);
+                // 管理员看所有评价（使用limit参数）
+                reviewList = reviewService.getLatestReviews(10);
                 break;
             case "HOST":
-                // 民宿主看自己民宿的评价
-                reviewList = reviewService.getReviewsByHomestayId(targetId, 1, 100);
+                // 民宿主看自己民宿的评价（分页）
+                reviewList = reviewService.getReviewsByHomestayId(targetId, currentPage, pageSize);
                 break;
             case "GUEST":
-                // 游客看自己的评价
-                reviewList = reviewService.getReviewsByGuestId(targetId, 1, 100);
+                // 游客看自己的评价（分页）
+                reviewList = reviewService.getReviewsByGuestId(targetId, currentPage, pageSize);
                 break;
         }
 
@@ -304,6 +361,7 @@ public class ReviewView extends JFrame {
         }
 
         updateStats();
+        updatePaginationInfo();
     }
 
     private void updateStats() {
@@ -468,5 +526,60 @@ public class ReviewView extends JFrame {
     private void addReview() {
         JOptionPane.showMessageDialog(this, "发表评价功能待实现\n需要选择已完成且未评价的订单",
                 "提示", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    // 分页相关方法
+    private void updatePaginationInfo() {
+        // 计算总页数（根据实际数据量计算）
+        int totalCount = tableModel.getRowCount();
+        totalPages = (totalCount + pageSize - 1) / pageSize;
+        if (totalPages < 1) totalPages = 1;
+        
+        pageInfoLabel.setText("第 " + currentPage + " 页 / 共 " + totalPages + " 页");
+        pageInput.setText(String.valueOf(currentPage));
+        
+        // 更新按钮状态
+        firstPageButton.setEnabled(currentPage > 1);
+        prevPageButton.setEnabled(currentPage > 1);
+        nextPageButton.setEnabled(currentPage < totalPages);
+        lastPageButton.setEnabled(currentPage < totalPages);
+    }
+    
+    private void goToFirstPage() {
+        currentPage = 1;
+        loadData();
+    }
+    
+    private void goToPrevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            loadData();
+        }
+    }
+    
+    private void goToNextPage() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            loadData();
+        }
+    }
+    
+    private void goToLastPage() {
+        currentPage = totalPages;
+        loadData();
+    }
+    
+    private void goToPage() {
+        try {
+            int page = Integer.parseInt(pageInput.getText().trim());
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                loadData();
+            } else {
+                JOptionPane.showMessageDialog(this, "页码超出范围", "提示", JOptionPane.WARNING_MESSAGE);
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "请输入有效的页码", "提示", JOptionPane.WARNING_MESSAGE);
+        }
     }
 }

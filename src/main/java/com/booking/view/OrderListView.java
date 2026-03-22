@@ -30,6 +30,17 @@ public class OrderListView extends JFrame {
     private JButton refreshButton;
     private JButton viewDetailButton;
     private JButton backButton;
+    
+    // 分页相关
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalPages = 1;
+    private JButton firstPageButton;
+    private JButton prevPageButton;
+    private JButton nextPageButton;
+    private JButton lastPageButton;
+    private JTextField pageInput;
+    private JLabel pageInfoLabel;
 
     public OrderListView(User user, String role, int id) {
         this.currentUser = user;
@@ -60,7 +71,7 @@ public class OrderListView extends JFrame {
         // 标题
         JLabel titleLabel = new JLabel(title, JLabel.CENTER);
         titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 24));
-        titleLabel.setForeground(AppColors.PRIMARY_PURPLE);
+        titleLabel.setForeground(Color.BLACK);
 
         // 筛选面板
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
@@ -129,7 +140,7 @@ public class OrderListView extends JFrame {
         orderTable.setRowHeight(25);
         orderTable.getTableHeader().setFont(new Font("微软雅黑", Font.BOLD, 13));
         orderTable.getTableHeader().setBackground(AppColors.PRIMARY_PURPLE);
-        orderTable.getTableHeader().setForeground(Color.WHITE);
+        orderTable.getTableHeader().setForeground(Color.BLACK);
         orderTable.setSelectionBackground(AppColors.HOVER_PURPLE);
 
         // 设置列宽
@@ -148,19 +159,58 @@ public class OrderListView extends JFrame {
         JScrollPane scrollPane = new JScrollPane(orderTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(AppColors.PRIMARY_PURPLE));
 
+        // 分页面板
+        JPanel paginationPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        paginationPanel.setBackground(AppColors.LIGHT_PURPLE);
+
+        firstPageButton = new JButton("首页");
+        prevPageButton = new JButton("上一页");
+        nextPageButton = new JButton("下一页");
+        lastPageButton = new JButton("末页");
+        pageInput = new JTextField(3);
+        pageInfoLabel = new JLabel("第 1 页 / 共 1 页");
+
+        styleButton(firstPageButton);
+        styleButton(prevPageButton);
+        styleButton(nextPageButton);
+        styleButton(lastPageButton);
+
+        pageInput.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        pageInput.setHorizontalAlignment(JTextField.CENTER);
+        pageInfoLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        pageInfoLabel.setForeground(AppColors.DARK_PURPLE);
+
+        paginationPanel.add(firstPageButton);
+        paginationPanel.add(prevPageButton);
+        paginationPanel.add(new JLabel("跳转到:"));
+        paginationPanel.add(pageInput);
+        paginationPanel.add(new JLabel("页"));
+        paginationPanel.add(pageInfoLabel);
+        paginationPanel.add(nextPageButton);
+        paginationPanel.add(lastPageButton);
+
         // 底部统计
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         bottomPanel.setBackground(AppColors.LIGHT_PURPLE);
         JLabel statsLabel = new JLabel("总订单数: 0 | 总金额: 0.00元");
         statsLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
-        statsLabel.setForeground(AppColors.DARK_PURPLE);
+        statsLabel.setForeground(Color.BLACK);
         bottomPanel.add(statsLabel);
 
         // 组装界面
-        mainPanel.add(titleLabel, BorderLayout.NORTH);
-        mainPanel.add(topPanel, BorderLayout.NORTH);
+        JPanel northPanel = new JPanel(new BorderLayout());
+        northPanel.setBackground(AppColors.LIGHT_PURPLE);
+        northPanel.add(titleLabel, BorderLayout.NORTH);
+        northPanel.add(topPanel, BorderLayout.SOUTH);
+        
+        JPanel southPanel = new JPanel(new BorderLayout());
+        southPanel.setBackground(AppColors.LIGHT_PURPLE);
+        southPanel.add(paginationPanel, BorderLayout.NORTH);
+        southPanel.add(bottomPanel, BorderLayout.SOUTH);
+        
+        mainPanel.add(northPanel, BorderLayout.NORTH);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
-        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+        mainPanel.add(southPanel, BorderLayout.SOUTH);
 
         add(mainPanel);
 
@@ -169,6 +219,13 @@ public class OrderListView extends JFrame {
         refreshButton.addActionListener(e -> loadData());
         viewDetailButton.addActionListener(e -> viewOrderDetail());
         backButton.addActionListener(e -> dispose());
+        
+        // 分页事件
+        firstPageButton.addActionListener(e -> goToFirstPage());
+        prevPageButton.addActionListener(e -> goToPrevPage());
+        nextPageButton.addActionListener(e -> goToNextPage());
+        lastPageButton.addActionListener(e -> goToLastPage());
+        pageInput.addActionListener(e -> goToPage());
     }
 
     private void styleButton(JButton button) {
@@ -213,22 +270,21 @@ public class OrderListView extends JFrame {
     }
 
     private void loadData() {
-        // TODO: 从Service加载数据
         tableModel.setRowCount(0);
         List<Reservation> orderList=null;
         // 根据角色加载不同数据
         switch (userRole) {
             case "ADMIN":
-                // 管理员看所有订单（不分页，取前100条）
-                orderList = reservationService.searchReservations(null, null, null, null, 1, 100);
+                // 管理员看所有订单（分页）
+                orderList = reservationService.searchReservations(null, null, null, null, currentPage, pageSize);
                 break;
             case "HOST":
-                // 民宿主看自己民宿的订单
-                orderList = reservationService.getHomestayReservations(targetId, 1, 100);
+                // 民宿主看自己民宿的订单（分页）
+                orderList = reservationService.getHomestayReservations(targetId, currentPage, pageSize);
                 break;
             case "GUEST":
-                // 游客看自己的订单
-                orderList = reservationService.getUserReservations(targetId, 1, 100);
+                // 游客看自己的订单（分页）
+                orderList = reservationService.getUserReservations(targetId, currentPage, pageSize);
                 break;
         }
       if(orderList==null)return;
@@ -256,6 +312,7 @@ public class OrderListView extends JFrame {
         }
         
         updateStats();
+        updatePaginationInfo();
     }
 
     private void updateStats() {
@@ -265,6 +322,7 @@ public class OrderListView extends JFrame {
             totalAmount += (double) tableModel.getValueAt(i, 8);
         }
 
+        // 直接更新southPanel中的bottomPanel
         Container contentPane = getContentPane();
         if (contentPane.getComponentCount() > 0) {
             Component mainComp = contentPane.getComponent(0);
@@ -272,14 +330,22 @@ public class OrderListView extends JFrame {
                 JPanel mainPanel = (JPanel) mainComp;
                 int compCount = mainPanel.getComponentCount();
                 if (compCount > 0) {
-                    Component bottomComp = mainPanel.getComponent(compCount - 1);
-                    if (bottomComp instanceof JPanel) {
-                        JPanel bottomPanel = (JPanel) bottomComp;
-                        if (bottomPanel.getComponentCount() > 0) {
-                            Component labelComp = bottomPanel.getComponent(0);
-                            if (labelComp instanceof JLabel) {
-                                JLabel statsLabel = (JLabel) labelComp;
-                                statsLabel.setText(String.format("总订单数: %d | 总金额: %.2f元", total, totalAmount));
+                    // 获取southPanel
+                    Component southComp = mainPanel.getComponent(compCount - 1);
+                    if (southComp instanceof JPanel) {
+                        JPanel southPanel = (JPanel) southComp;
+                        if (southPanel.getComponentCount() > 0) {
+                            // 获取bottomPanel
+                            Component bottomComp = southPanel.getComponent(1);
+                            if (bottomComp instanceof JPanel) {
+                                JPanel bottomPanel = (JPanel) bottomComp;
+                                if (bottomPanel.getComponentCount() > 0) {
+                                    Component labelComp = bottomPanel.getComponent(0);
+                                    if (labelComp instanceof JLabel) {
+                                        JLabel statsLabel = (JLabel) labelComp;
+                                        statsLabel.setText(String.format("总订单数: %d | 总金额: %.2f元", total, totalAmount));
+                                    }
+                                }
                             }
                         }
                     }
@@ -306,9 +372,9 @@ public class OrderListView extends JFrame {
             return;
         }
         
-        // 调用Service搜索
+        // 调用Service搜索（分页）
         List<Reservation> searchResult = reservationService.searchReservations(
-            null, status, start, end, 1, 100);
+            null, status, start, end, currentPage, pageSize);
         
         // 更新表格
         tableModel.setRowCount(0);
@@ -333,6 +399,7 @@ public class OrderListView extends JFrame {
         }
         
         updateStats();
+        updatePaginationInfo();
     }
 
     private void viewOrderDetail() {
@@ -369,5 +436,80 @@ public class OrderListView extends JFrame {
                 checkIn, checkOut, guests, price, status);
 
         JOptionPane.showMessageDialog(this, detail, "订单详情", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    // 分页相关方法
+    private void updatePaginationInfo() {
+        // 计算总页数（获取所有数据的总数）
+        int totalCount = getTotalReservationCount();
+        totalPages = (totalCount + pageSize - 1) / pageSize;
+        if (totalPages < 1) totalPages = 1;
+        
+        pageInfoLabel.setText("第 " + currentPage + " 页 / 共 " + totalPages + " 页");
+        pageInput.setText(String.valueOf(currentPage));
+        
+        // 更新按钮状态
+        firstPageButton.setEnabled(currentPage > 1);
+        prevPageButton.setEnabled(currentPage > 1);
+        nextPageButton.setEnabled(currentPage < totalPages);
+        lastPageButton.setEnabled(currentPage < totalPages);
+    }
+    
+    // 获取总订单数
+    private int getTotalReservationCount() {
+        List<Reservation> allReservations = null;
+        switch (userRole) {
+            case "ADMIN":
+                // 管理员获取所有订单
+                allReservations = reservationService.searchReservations(null, null, null, null, 1, 1000);
+                break;
+            case "HOST":
+                // 民宿主获取自己民宿的所有订单
+                allReservations = reservationService.getHomestayReservations(targetId, 1, 1000);
+                break;
+            case "GUEST":
+                // 游客获取自己的所有订单
+                allReservations = reservationService.getUserReservations(targetId, 1, 1000);
+                break;
+        }
+        return allReservations != null ? allReservations.size() : 0;
+    }
+    
+    private void goToFirstPage() {
+        currentPage = 1;
+        loadData();
+    }
+    
+    private void goToPrevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            loadData();
+        }
+    }
+    
+    private void goToNextPage() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            loadData();
+        }
+    }
+    
+    private void goToLastPage() {
+        currentPage = totalPages;
+        loadData();
+    }
+    
+    private void goToPage() {
+        try {
+            int page = Integer.parseInt(pageInput.getText().trim());
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                loadData();
+            } else {
+                JOptionPane.showMessageDialog(this, "页码超出范围", "提示", JOptionPane.WARNING_MESSAGE);
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "请输入有效的页码", "提示", JOptionPane.WARNING_MESSAGE);
+        }
     }
 }

@@ -8,6 +8,7 @@ import com.booking.util.DBUtil;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -288,13 +289,26 @@ public class ReservationServiceImpl implements ReservationService{
 
     @Override
     public List<Reservation> getUserReservations(int userId, int pageNum, int pageSize) {
-        // 使用分页查询
-        return reservationDAO.selectByGuestId(userId);
+        // 获取所有数据，然后在内存中进行分页
+        List<Reservation> allReservations = reservationDAO.selectByGuestId(userId);
+        int startIndex = (pageNum - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, allReservations.size());
+        if (startIndex >= allReservations.size()) {
+            return new ArrayList<>();
+        }
+        return allReservations.subList(startIndex, endIndex);
     }
 
     @Override
     public List<Reservation> getHomestayReservations(int homestayId, int pageNum, int pageSize) {
-        return reservationDAO.selectByHomestayId(homestayId);
+        // 获取所有数据，然后在内存中进行分页
+        List<Reservation> allReservations = reservationDAO.selectByHomestayId(homestayId);
+        int startIndex = (pageNum - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, allReservations.size());
+        if (startIndex >= allReservations.size()) {
+            return new ArrayList<>();
+        }
+        return allReservations.subList(startIndex, endIndex);
     }
 
     @Override

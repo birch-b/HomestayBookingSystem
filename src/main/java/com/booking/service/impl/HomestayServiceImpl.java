@@ -62,8 +62,7 @@ public class HomestayServiceImpl implements HomestayService{
     if (homestay==null) {
         return false;
     }
-    homestay.setStatus(0);
-    int result = homestayDAO.update(homestay);
+    int result = homestayDAO.deleteById(homestayId);
     return result>0;
     }
 
