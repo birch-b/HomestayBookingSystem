@@ -26,6 +26,7 @@ public class ReviewView extends JFrame {
     private JTable reviewTable;
     private DefaultTableModel tableModel;
     private JComboBox<String> ratingFilter;
+    private JTextField searchField;
     private JButton searchButton;
     private JButton refreshButton;
     private JButton replyButton; // 民宿主回复
@@ -73,30 +74,38 @@ public class ReviewView extends JFrame {
 
         // 标题
         JLabel titleLabel = new JLabel(title, JLabel.CENTER);
-        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 24));
+        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 20));
         titleLabel.setForeground(Color.BLACK);
 
         // 筛选面板
-        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 5));
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         filterPanel.setBackground(AppColors.LIGHT_PURPLE);
 
         JLabel ratingLabel = new JLabel("评分:");
-        ratingLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        ratingLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         ratingLabel.setForeground(Color.BLACK);
         filterPanel.add(ratingLabel);
         
         String[] ratings = {"全部", "5星", "4星", "3星", "2星", "1星"};
         ratingFilter = new JComboBox<>(ratings);
-        ratingFilter.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        ratingFilter.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         ratingFilter.setForeground(Color.BLACK);
         ratingFilter.setBackground(Color.WHITE);
+        ratingFilter.setPreferredSize(new Dimension(80, 22));
         filterPanel.add(ratingFilter);
         
-        // 添加空白面板增加间距
-        JPanel spacer = new JPanel();
-        spacer.setPreferredSize(new Dimension(30, 10));
-        spacer.setBackground(AppColors.LIGHT_PURPLE);
-        filterPanel.add(spacer);
+        // 添加搜索框
+        JLabel keywordLabel = new JLabel("关键词:");
+        keywordLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+        keywordLabel.setForeground(Color.BLACK);
+        filterPanel.add(keywordLabel);
+        
+        searchField = new JTextField(10);
+        searchField.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+        searchField.setForeground(Color.BLACK);
+        searchField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
+        searchField.setPreferredSize(new Dimension(100, 22));
+        filterPanel.add(searchField);
 
         searchButton = new JButton("搜索");
         refreshButton = new JButton("刷新");
@@ -108,15 +117,15 @@ public class ReviewView extends JFrame {
         filterPanel.add(refreshButton);
 
         // 按钮面板（根据角色不同显示不同按钮）
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 5));
         buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
 
         if ("HOST".equals(userRole)) {
-            replyButton = new JButton("回复评价");
+            replyButton = new JButton("回复");
             styleButton(replyButton);
             buttonPanel.add(replyButton);
         } else if ("GUEST".equals(userRole)) {
-            addButton = new JButton("发表评价");
+            addButton = new JButton("发表");
             styleButton(addButton);
             buttonPanel.add(addButton);
         }
@@ -269,11 +278,12 @@ public class ReviewView extends JFrame {
     }
 
     private void styleButton(JButton button) {
-        button.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        button.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         button.setBackground(AppColors.BUTTON_PURPLE);
         button.setForeground(AppColors.DARK_PURPLE);
         button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        button.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+        button.setPreferredSize(new Dimension(80, 22));
 
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
@@ -292,6 +302,10 @@ public class ReviewView extends JFrame {
 
     private void loadData() {
         tableModel.setRowCount(0);
+        if (searchField != null) {
+            searchField.setText(""); // 清空搜索框
+        }
+        ratingFilter.setSelectedIndex(0); // 重置评分筛选
 
         List<Review> reviewList = null;
         
@@ -388,33 +402,40 @@ public class ReviewView extends JFrame {
 
     private void searchReviews() {
         String rating = (String) ratingFilter.getSelectedItem();
+        String keyword = searchField.getText().trim();
         
         List<Review> searchResult = null;
         
-        if (!"全部".equals(rating)) {
-            // 解析评分值，从"5星"格式中提取数字
-            int ratingValue = Integer.parseInt(rating.substring(0, 1));
-            // 根据角色获取不同数据后再筛选
-            switch (userRole) {
-                case "ADMIN":
-                    searchResult = reviewService.getLatestReviews(100);
-                    break;
-                case "HOST":
-                    searchResult = reviewService.getReviewsByHomestayId(targetId, 1, 100);
-                    break;
-                case "GUEST":
-                    searchResult = reviewService.getReviewsByGuestId(targetId, 1, 100);
-                    break;
-            }
-            
-            if (searchResult != null) {
+        // 根据角色获取不同数据后再筛选
+        switch (userRole) {
+            case "ADMIN":
+                searchResult = reviewService.getLatestReviews(100);
+                break;
+            case "HOST":
+                searchResult = reviewService.getReviewsByHomestayId(targetId, 1, 100);
+                break;
+            case "GUEST":
+                searchResult = reviewService.getReviewsByGuestId(targetId, 1, 100);
+                break;
+        }
+        
+        if (searchResult != null) {
+            // 按评分筛选
+            if (!"全部".equals(rating)) {
+                int ratingValue = Integer.parseInt(rating.substring(0, 1));
                 int finalRatingValue = ratingValue;
                 searchResult.removeIf(r -> r.getRating() != finalRatingValue);
             }
-        } else {
-            // 重新加载所有数据
-            loadData();
-            return;
+            
+            // 按关键词筛选
+            if (!keyword.isEmpty()) {
+                String finalKeyword = keyword;
+                searchResult.removeIf(r -> {
+                    String comment = r.getComment() != null ? r.getComment() : "";
+                    String reply = r.getHostReply() != null ? r.getHostReply() : "";
+                    return !comment.contains(finalKeyword) && !reply.contains(finalKeyword);
+                });
+            }
         }
 
         // 更新表格
@@ -469,6 +490,7 @@ public class ReviewView extends JFrame {
             JOptionPane.showMessageDialog(this, "未找到符合条件的评价", "提示", JOptionPane.INFORMATION_MESSAGE);
             // 重置搜索框并返回全部数据
             ratingFilter.setSelectedIndex(0); // 重置为"全部"
+            searchField.setText(""); // 清空搜索框
             loadData(); // 重新加载所有数据
         }
         updateStats();

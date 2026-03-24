@@ -318,34 +318,39 @@ public class PaymentDAOImpl implements PaymentDAO {
         }
     }
 
-    @Override
-    public List<Payment> selectByDateRange(Date start, Date end) {
-        String sql = "SELECT * FROM payments WHERE create_time BETWEEN ? AND ? ORDER BY create_time DESC";
-        List<Payment> list = new ArrayList<>();
-        Connection conn;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
+   // 在 PaymentDAOImpl.java 中修改 selectByDateRange 方法
+@Override
+public List<Payment> selectByDateRange(Date start, Date end) {
+    // 修复：添加 status = 'SUCCESS' 过滤，只统计成功的支付
+    String sql = "SELECT * FROM payments WHERE status = 'SUCCESS' AND " +
+                 "((pay_time BETWEEN ? AND ?) OR (pay_time IS NULL AND create_time BETWEEN ? AND ?)) " +
+                 "ORDER BY COALESCE(pay_time, create_time) DESC";
+    List<Payment> list = new ArrayList<>();
+    Connection conn;
+    PreparedStatement pstmt = null;
+    ResultSet rs = null;
 
-        try {
-            conn = DBUtil.getConnection();
-            pstmt = conn.prepareStatement(sql);
-            pstmt.setTimestamp(1, new Timestamp(start.getTime()));
-            pstmt.setTimestamp(2, new Timestamp(end.getTime()));
-            rs = pstmt.executeQuery();
+    try {
+        conn = DBUtil.getConnection();
+        pstmt = conn.prepareStatement(sql);
+        pstmt.setTimestamp(1, new Timestamp(start.getTime()));
+        pstmt.setTimestamp(2, new Timestamp(end.getTime()));
+        pstmt.setTimestamp(3, new Timestamp(start.getTime()));
+        pstmt.setTimestamp(4, new Timestamp(end.getTime()));
+        rs = pstmt.executeQuery();
 
-            while (rs.next()) {
-                list.add(extractPaymentFromResultSet(rs));
-            }
-            return list;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return list;
-        } finally {
-            DBUtil.closeResultSet(rs);
-            if (pstmt != null) DBUtil.closeStatement(pstmt);
+        while (rs.next()) {
+            list.add(extractPaymentFromResultSet(rs));
         }
+        return list;
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return list;
+    } finally {
+        DBUtil.closeResultSet(rs);
+        if (pstmt != null) DBUtil.closeStatement(pstmt);
     }
-
+}
     @Override
     public double getTotalPaidByReservation(int reservationId) {
         String sql = "SELECT SUM(amount) FROM payments WHERE reservation_id = ? AND status = 'SUCCESS'";

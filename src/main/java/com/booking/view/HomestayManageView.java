@@ -62,22 +62,23 @@ public class HomestayManageView extends JFrame {
 
         // 标题
         JLabel titleLabel = new JLabel("民宿管理", JLabel.CENTER);
-        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 24));
+        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 20));
         titleLabel.setForeground(Color.BLACK);
 
         // 搜索面板
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         searchPanel.setBackground(AppColors.LIGHT_PURPLE);
 
         JLabel nameLabel = new JLabel("民宿名称:");
-        nameLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        nameLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         nameLabel.setForeground(Color.BLACK);
         searchPanel.add(nameLabel);
         
-        searchField = new JTextField(20);
-        searchField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        searchField = new JTextField(10);
+        searchField.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         searchField.setForeground(Color.BLACK);
         searchField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
+        searchField.setPreferredSize(new Dimension(100, 22));
 
         searchButton = new JButton("搜索");
         styleButton(searchButton);
@@ -86,10 +87,10 @@ public class HomestayManageView extends JFrame {
         searchPanel.add(searchButton);
 
         // 按钮面板
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 5));
         buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
 
-        addButton = new JButton("新增民宿");
+        addButton = new JButton("新增");
         editButton = new JButton("编辑");
         deleteButton = new JButton("删除");
         roomManageButton = new JButton("房间管理");
@@ -257,11 +258,12 @@ public class HomestayManageView extends JFrame {
     }
 
     private void styleButton(JButton button) {
-        button.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        button.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         button.setBackground(AppColors.BUTTON_PURPLE);
         button.setForeground(AppColors.DARK_PURPLE);
         button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        button.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+        button.setPreferredSize(new Dimension(80, 22));
 
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {

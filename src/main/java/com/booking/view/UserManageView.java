@@ -1,8 +1,11 @@
 package com.booking.view;
 
 import com.booking.model.User;
+import com.booking.model.Reservation;
 import com.booking.service.UserService;
+import com.booking.service.ReservationService;
 import com.booking.service.impl.UserServiceImpl;
+import com.booking.service.impl.ReservationServiceImpl;
 import com.booking.util.AppColors;
 
 import javax.swing.*;
@@ -63,46 +66,47 @@ public class UserManageView extends JFrame {
 
         // 标题
         JLabel titleLabel = new JLabel("用户管理", JLabel.CENTER);
-        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 24));
+        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 20));
         titleLabel.setForeground(Color.BLACK);
 
         // 搜索面板
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         searchPanel.setBackground(AppColors.LIGHT_PURPLE);
 
         JLabel keywordLabel = new JLabel("关键词:");
-        keywordLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        keywordLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         keywordLabel.setForeground(Color.BLACK);
         searchPanel.add(keywordLabel);
         
-        searchField = new JTextField(15);
-        searchField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        searchField = new JTextField(10);
+        searchField.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         searchField.setForeground(Color.BLACK);
         searchField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
+        searchField.setPreferredSize(new Dimension(100, 22));
+        searchPanel.add(searchField);
 
-        JLabel roleLabel = new JLabel("用户名:");
-        roleLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        JLabel roleLabel = new JLabel("角色:");
+        roleLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         roleLabel.setForeground(Color.BLACK);
         searchPanel.add(roleLabel);
         
         String[] roles = {"全部", "管理员", "民宿主", "游客"};
         roleFilter = new JComboBox<>(roles);
-        roleFilter.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        roleFilter.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         roleFilter.setForeground(Color.BLACK);
         roleFilter.setBackground(Color.WHITE);
+        roleFilter.setPreferredSize(new Dimension(80, 22));
+        searchPanel.add(roleFilter);
 
         searchButton = new JButton("搜索");
         styleButton(searchButton);
-
-        searchPanel.add(searchField);
-        searchPanel.add(roleFilter);
         searchPanel.add(searchButton);
 
         // 按钮面板
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 5));
         buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
 
-        addButton = new JButton("新增用户");
+        addButton = new JButton("新增");
         editButton = new JButton("编辑");
         deleteButton = new JButton("删除");
         enableButton = new JButton("启用");
@@ -180,13 +184,14 @@ public class UserManageView extends JFrame {
         
         JButton firstPageButton = new JButton("首页");
         JButton prevPageButton = new JButton("上一页");
-        pageField = new JTextField(5);  // 保存引用
-        pageField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        pageField = new JTextField(4);  // 保存引用
+        pageField.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         pageField.setHorizontalAlignment(JTextField.CENTER);
         pageField.setText("1");
+        pageField.setPreferredSize(new Dimension(40, 22));
         
         pageInfoLabel = new JLabel("/ 1");  // 保存引用
-        pageInfoLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        pageInfoLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         pageInfoLabel.setForeground(Color.BLACK);
         
         JButton nextPageButton = new JButton("下一页");
@@ -275,11 +280,12 @@ public class UserManageView extends JFrame {
     }
 
     private void styleButton(JButton button) {
-        button.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        button.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         button.setBackground(AppColors.BUTTON_PURPLE);
         button.setForeground(AppColors.DARK_PURPLE);
         button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        button.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+        button.setPreferredSize(new Dimension(80, 22));
 
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
@@ -510,8 +516,8 @@ public class UserManageView extends JFrame {
         
         gbc.gridx = 1;
         gbc.gridwidth = 2;
-        String[] roles = {"ADMIN", "HOST", "GUEST"};
-        JComboBox<String> roleCombo = new JComboBox<>(roles);
+        String[] rolesCN = {"管理员", "民宿主", "游客"};
+        JComboBox<String> roleCombo = new JComboBox<>(rolesCN);
         roleCombo.setFont(new Font("微软雅黑", Font.PLAIN, 13));
         roleCombo.setPreferredSize(new Dimension(300, 25));
         roleCombo.setSelectedIndex(2); // 默认游客
@@ -568,7 +574,19 @@ public class UserManageView extends JFrame {
             String username = usernameField.getText().trim();
             String password = new String(passwordField.getPassword());
             String realName = realNameField.getText().trim();
-            String role = (String) roleCombo.getSelectedItem();
+            
+            // 转换角色（中文转英文）
+            String[] rolesCNAdd = {"管理员", "民宿主", "游客"};
+            String[] rolesENAdd = {"ADMIN", "HOST", "GUEST"};
+            String roleCNAdd = (String) roleCombo.getSelectedItem();
+            String role = rolesENAdd[2]; // 默认游客
+            for (int i = 0; i < rolesCNAdd.length; i++) {
+                if (rolesCNAdd[i].equals(roleCNAdd)) {
+                    role = rolesENAdd[i];
+                    break;
+                }
+            }
+            
             String phone = phoneField.getText().trim();
             String email = emailField.getText().trim();
             
@@ -655,7 +673,7 @@ public class UserManageView extends JFrame {
             gbc.fill = GridBagConstraints.HORIZONTAL;
             gbc.weightx = 1.0;
             
-            // 用户名（只读）
+            // 用户名
             gbc.gridx = 0;
             gbc.gridy = 0;
             gbc.gridwidth = 1;
@@ -666,7 +684,7 @@ public class UserManageView extends JFrame {
             JTextField usernameField = new JTextField(user.getUsername());
             usernameField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
             usernameField.setPreferredSize(new Dimension(300, 25));
-            usernameField.setEditable(false); // 用户名不可编辑
+            usernameField.setEditable(true); // 用户名可以编辑
             formPanel.add(usernameField, gbc);
             
             // 密码
@@ -696,19 +714,26 @@ public class UserManageView extends JFrame {
             formPanel.add(realNameField, gbc);
             
             // 角色
-            gbc.gridx = 0;
-            gbc.gridy = 3;
-            gbc.gridwidth = 1;
-            formPanel.add(new JLabel("角色:"), gbc);
-            
-            gbc.gridx = 1;
-            gbc.gridwidth = 2;
-            String[] roles = {"ADMIN", "HOST", "GUEST"};
-            JComboBox<String> roleCombo = new JComboBox<>(roles);
-            roleCombo.setFont(new Font("微软雅黑", Font.PLAIN, 13));
-            roleCombo.setPreferredSize(new Dimension(300, 25));
-            roleCombo.setSelectedItem(user.getRole());
-            formPanel.add(roleCombo, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 1;
+        formPanel.add(new JLabel("角色:"), gbc);
+        
+        gbc.gridx = 1;
+        gbc.gridwidth = 2;
+        String[] rolesCN = {"管理员", "民宿主", "游客"};
+        JComboBox<String> roleCombo = new JComboBox<>(rolesCN);
+        roleCombo.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        roleCombo.setPreferredSize(new Dimension(300, 25));
+        // 设置默认值
+        String[] rolesEN = {"ADMIN", "HOST", "GUEST"};
+        for (int i = 0; i < rolesEN.length; i++) {
+            if (rolesEN[i].equals(user.getRole())) {
+                roleCombo.setSelectedIndex(i);
+                break;
+            }
+        }
+        formPanel.add(roleCombo, gbc);
             
             // 手机号
             gbc.gridx = 0;
@@ -758,19 +783,38 @@ public class UserManageView extends JFrame {
             // 保存按钮事件
             saveButton.addActionListener(e -> {
                 // 获取输入
-                String password = new String(passwordField.getPassword());
-                String realName = realNameField.getText().trim();
-                String role = (String) roleCombo.getSelectedItem();
-                String phone = phoneField.getText().trim();
-                String email = emailField.getText().trim();
+            String username = usernameField.getText().trim();
+            String password = new String(passwordField.getPassword());
+            String realName = realNameField.getText().trim();
+            
+            // 转换角色（中文转英文）
+            String[] rolesCNEdit = {"管理员", "民宿主", "游客"};
+            String[] rolesENEdit = {"ADMIN", "HOST", "GUEST"};
+            String roleCNEdit = (String) roleCombo.getSelectedItem();
+            String role = rolesENEdit[2]; // 默认游客
+            for (int i = 0; i < rolesCNEdit.length; i++) {
+                if (rolesCNEdit[i].equals(roleCNEdit)) {
+                    role = rolesENEdit[i];
+                    break;
+                }
+            }
+            
+            String phone = phoneField.getText().trim();
+            String email = emailField.getText().trim();
                 
                 // 验证输入
+                if (username.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, "用户名不能为空", "提示", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                
                 if (realName.isEmpty()) {
                     JOptionPane.showMessageDialog(dialog, "真实姓名不能为空", "提示", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
                 
                 // 更新用户信息
+                user.setUsername(username);
                 user.setRealName(realName);
                 user.setRole(role);
                 user.setPhone(phone);
@@ -816,6 +860,24 @@ public class UserManageView extends JFrame {
         }
 
         int userId = (int) tableModel.getValueAt(row, 0);
+        
+        // 检查用户是否有相关的订单记录
+        try {
+            ReservationService reservationService = new ReservationServiceImpl();
+            List<Reservation> userOrders = reservationService.getUserReservations(userId, 1, 1);
+            
+            if (userOrders != null && !userOrders.isEmpty()) {
+                JOptionPane.showMessageDialog(this, 
+                    "无法删除用户 " + username + "，因为该用户有相关的订单记录。\n" +
+                    "请先删除或处理该用户的订单，然后再尝试删除用户。",
+                    "删除失败", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        } catch (Exception e) {
+            // 如果检查失败，仍然尝试删除，但记录错误
+            System.err.println("检查用户订单时出错: " + e.getMessage());
+        }
+        
         int confirm = JOptionPane.showConfirmDialog(this,
                 "确定要删除用户 " + username + " 吗？",
                 "确认删除", JOptionPane.YES_NO_OPTION);
@@ -826,7 +888,7 @@ public class UserManageView extends JFrame {
                 JOptionPane.showMessageDialog(this, "删除成功", "成功", JOptionPane.INFORMATION_MESSAGE);
                 loadData();  // 刷新列表
             } else {
-                JOptionPane.showMessageDialog(this, "删除失败", "错误", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "删除失败，请检查该用户是否有相关的订单记录", "错误", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

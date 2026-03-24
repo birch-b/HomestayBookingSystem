@@ -14,7 +14,12 @@ import com.booking.model.Payment;
 import com.booking.model.Reservation;
 import com.booking.model.Room;
 import com.booking.service.PaymentService;
+import com.booking.util.DBUtil;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -262,9 +267,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         double total = 0;
         for (Payment p : todayPayments) {
-            if ("SUCCESS".equals(p.getStatus())) {
-                total += p.getAmount();
-            }
+            total += p.getAmount();
         }
         return total;
     }
@@ -279,9 +282,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         double total = 0;
         for (Payment p : monthPayments) {
-            if ("SUCCESS".equals(p.getStatus())) {
-                total += p.getAmount();
-            }
+            total += p.getAmount();
         }
         return total;
     }
@@ -294,31 +295,48 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public List<Object[]> getMonthlyIncomeAll(int year) {
         List<Object[]> monthlyIncome = new ArrayList<>();
-
-        // 初始化12个月
+        
+        // 初始化12个月，默认金额为0
         for (int i = 1; i <= 12; i++) {
             Object[] month = new Object[2];
             month[0] = i;
             month[1] = 0.0;
             monthlyIncome.add(month);
         }
-
-        // 获取所有成功的支付记录
-        List<Payment> allSuccess = paymentDAO.selectByStatus("SUCCESS");
-
-        for (Payment p : allSuccess) {
-            if (p.getPayTime() != null) {
-                @SuppressWarnings("deprecation")
-                int payYear = p.getPayTime().getYear() + 1900;
-                if (payYear == year) {
-                    @SuppressWarnings("deprecation")
-                    int month = p.getPayTime().getMonth();  // 0-11
-                    double current = (double) monthlyIncome.get(month)[1];
-                    monthlyIncome.get(month)[1] = current + p.getAmount();
+        
+        String sql = "SELECT MONTH(COALESCE(pay_time, create_time)) as month, " +
+                     "SUM(amount) as total " +
+                     "FROM payments " +
+                     "WHERE status = 'SUCCESS' " +
+                     "AND YEAR(COALESCE(pay_time, create_time)) = ? " +
+                     "GROUP BY MONTH(COALESCE(pay_time, create_time)) " +
+                     "ORDER BY month";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = DBUtil.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, year);
+            rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+                int month = rs.getInt("month");
+                double amount = rs.getDouble("total");
+                if (month >= 1 && month <= 12) {
+                    monthlyIncome.get(month - 1)[1] = amount;
                 }
             }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            DBUtil.closeResultSet(rs);
+            if (pstmt != null) DBUtil.closeStatement(pstmt);
+            DBUtil.closeConnection();  // 修改这里：不要传参数
         }
-
+        
         return monthlyIncome;
     }
 
@@ -330,10 +348,8 @@ public class PaymentServiceImpl implements PaymentService {
         java.util.Map<String, Double> methodTotal = new java.util.HashMap<>();
 
         for (Payment p : payments) {
-            if ("SUCCESS".equals(p.getStatus())) {
-                String method = p.getPaymentMethod();
-                methodTotal.put(method, methodTotal.getOrDefault(method, 0.0) + p.getAmount());
-            }
+            String method = p.getPaymentMethod();
+            methodTotal.put(method, methodTotal.getOrDefault(method, 0.0) + p.getAmount());
         }
 
         List<Object[]> stats = new ArrayList<>();
@@ -349,18 +365,56 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public double getTotalAmount() {
-        List<Payment> allSuccess = paymentDAO.selectByStatus("SUCCESS");
-
-        double total = 0;
-        for (Payment p : allSuccess) {
-            total += p.getAmount();
+        String sql = "SELECT SUM(amount) as total FROM payments WHERE status = 'SUCCESS'";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = DBUtil.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getDouble("total");
+            }
+            return 0.0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0.0;
+        } finally {
+            DBUtil.closeResultSet(rs);
+            if (pstmt != null) DBUtil.closeStatement(pstmt);
+            DBUtil.closeConnection();  // 修改这里：不要传参数
         }
-        return total;
     }
 
     @Override
     public long getSuccessCount() {
-        return paymentDAO.selectByStatus("SUCCESS").size();
+        String sql = "SELECT COUNT(*) FROM payments WHERE status = 'SUCCESS'";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = DBUtil.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+            return 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
+        } finally {
+            DBUtil.closeResultSet(rs);
+            if (pstmt != null) DBUtil.closeStatement(pstmt);
+            DBUtil.closeConnection();  // 修改这里：不要传参数
+        }
     }
 
     // ==================== 私有工具方法 ====================

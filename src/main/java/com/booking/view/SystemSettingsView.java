@@ -215,12 +215,12 @@ public class SystemSettingsView extends JFrame {
     }
 
     private void styleButton(JButton button) {
-        button.setFont(new Font("微软雅黑", Font.BOLD, 12));
+        button.setFont(new Font("微软雅黑", Font.PLAIN, 13));
         button.setBackground(AppColors.BUTTON_PURPLE);
         button.setForeground(AppColors.DARK_PURPLE);
         button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createEmptyBorder(8, 20, 8, 20));
-        button.setPreferredSize(new Dimension(100, 30));
+        button.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        button.setPreferredSize(new Dimension(100, 25));
 
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {

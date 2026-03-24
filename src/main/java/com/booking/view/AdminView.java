@@ -1,6 +1,12 @@
 package com.booking.view;
 
 import com.booking.model.User;
+import com.booking.service.UserService;
+import com.booking.service.ReservationService;
+import com.booking.service.HomestayService;
+import com.booking.service.impl.UserServiceImpl;
+import com.booking.service.impl.ReservationServiceImpl;
+import com.booking.service.impl.HomestayServiceImpl;
 import com.booking.util.AppColors;
 
 import javax.swing.*;
@@ -107,7 +113,7 @@ public class AdminView extends MainView {
         totalUsersLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         totalUsersLabel.setForeground(AppColors.DARK_PURPLE);
 
-        JLabel totalUsersValue = new JLabel("--");
+        JLabel totalUsersValue = new JLabel(getTotalUsers());
         totalUsersValue.setFont(new Font("微软雅黑", Font.BOLD, 12));
         totalUsersValue.setForeground(AppColors.PRIMARY_PURPLE);
 
@@ -115,7 +121,7 @@ public class AdminView extends MainView {
         totalHomestaysLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         totalHomestaysLabel.setForeground(AppColors.DARK_PURPLE);
 
-        JLabel totalHomestaysValue = new JLabel("--");
+        JLabel totalHomestaysValue = new JLabel(getTotalHomestays());
         totalHomestaysValue.setFont(new Font("微软雅黑", Font.BOLD, 12));
         totalHomestaysValue.setForeground(AppColors.PRIMARY_PURPLE);
 
@@ -123,7 +129,7 @@ public class AdminView extends MainView {
         totalOrdersLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         totalOrdersLabel.setForeground(AppColors.DARK_PURPLE);
 
-        JLabel totalOrdersValue = new JLabel("--");
+        JLabel totalOrdersValue = new JLabel(getTotalOrders());
         totalOrdersValue.setFont(new Font("微软雅黑", Font.BOLD, 12));
         totalOrdersValue.setForeground(AppColors.PRIMARY_PURPLE);
 
@@ -145,6 +151,40 @@ public class AdminView extends MainView {
         contentPanel.add(mainPanel, BorderLayout.CENTER);
         contentPanel.revalidate();
         contentPanel.repaint();
+    }
+
+    // 获取总用户数
+    private String getTotalUsers() {
+        try {
+            UserService userService = new UserServiceImpl();
+            long count = userService.getTotalUserCount();
+            return String.valueOf(count);
+        } catch (Exception e) {
+            return "--";
+        }
+    }
+
+    // 获取总民宿数
+    private String getTotalHomestays() {
+        try {
+            HomestayService homestayService = new HomestayServiceImpl();
+            long count = homestayService.getTotalCount();
+            return String.valueOf(count);
+        } catch (Exception e) {
+            return "--";
+        }
+    }
+
+    // 获取总订单数
+    private String getTotalOrders() {
+        try {
+            ReservationService reservationService = new ReservationServiceImpl();
+            // 使用searchReservations方法获取所有订单，然后计算数量
+            int count = reservationService.searchReservations(null, null, null, null, 1, Integer.MAX_VALUE).size();
+            return String.valueOf(count);
+        } catch (Exception e) {
+            return "--";
+        }
     }
 
     private void styleMenuItem(JMenuItem item) {

@@ -313,7 +313,59 @@ public class ReservationServiceImpl implements ReservationService{
 
     @Override
     public List<Reservation> searchReservations(String keyword, String status, Date start, Date end, int pageNum, int pageSize) {
+        // 如果没有搜索条件，直接获取所有订单并在内存中分页
+        if ((keyword == null || keyword.trim().isEmpty()) &&
+            (status == null || status.trim().isEmpty()) &&
+            start == null && end == null) {
+            List<Reservation> allReservations = reservationDAO.selectAll();
+            int startIndex = (pageNum - 1) * pageSize;
+            int endIndex = Math.min(startIndex + pageSize, allReservations.size());
+            if (startIndex >= allReservations.size()) {
+                return new ArrayList<>();
+            }
+            return allReservations.subList(startIndex, endIndex);
+        }
+        // 有搜索条件时使用DAO的搜索方法
         return reservationDAO.searchReservations(keyword, status, start, end, pageNum, pageSize);
+    }
+
+    @Override
+    public List<Reservation> searchReservationsByDateRange(Integer homestayId, String status, Date startDate, Date endDate) {
+        // 实现按日期范围查询订单的逻辑
+        // 可以复用 DAO 层的方法
+        List<Reservation> allReservations;
+        
+        if (homestayId != null && homestayId > 0) {
+            // 如果指定了民宿ID，查询该民宿的订单
+            allReservations = reservationDAO.selectByHomestayId(homestayId);
+        } else {
+            // 否则查询所有订单
+            allReservations = reservationDAO.selectAll();
+        }
+        
+        // 过滤符合条件的订单
+        List<Reservation> filteredReservations = new ArrayList<>();
+        for (Reservation r : allReservations) {
+            // 状态过滤
+            if (status != null && !status.trim().isEmpty() && !status.equals(r.getStatus())) {
+                continue;
+            }
+            
+            // 日期范围过滤
+            Date timeToUse = r.getCheckOutDate() != null ? r.getCheckOutDate() : r.getCreateTime();
+            if (timeToUse != null) {
+                if (startDate != null && timeToUse.before(startDate)) {
+                    continue;
+                }
+                if (endDate != null && timeToUse.after(endDate)) {
+                    continue;
+                }
+            }
+            
+            filteredReservations.add(r);
+        }
+        
+        return filteredReservations;
     }
 
     @Override

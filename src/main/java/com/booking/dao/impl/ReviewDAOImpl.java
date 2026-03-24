@@ -127,7 +127,7 @@ public class ReviewDAOImpl implements ReviewDAO {
 
     @Override
     public List<Review> selectAll() {
-        String sql = "SELECT * FROM reviews ORDER BY create_time DESC";
+        String sql = "SELECT * FROM reviews ORDER BY review_id ASC";
         List<Review> list = new ArrayList<>();
         Connection conn;
         PreparedStatement pstmt = null;
@@ -153,7 +153,7 @@ public class ReviewDAOImpl implements ReviewDAO {
 
     @Override
     public List<Review> selectByPage(int pageNum, int pageSize) {
-        String sql = "SELECT * FROM reviews ORDER BY create_time DESC LIMIT ?, ?";
+        String sql = "SELECT * FROM reviews ORDER BY review_id ASC LIMIT ?, ?";
         List<Review> list = new ArrayList<>();
         Connection conn;
         PreparedStatement pstmt = null;
@@ -238,7 +238,7 @@ public class ReviewDAOImpl implements ReviewDAO {
                 "JOIN reservations res ON r.reservation_id = res.reservation_id " +
                 "JOIN rooms rm ON res.room_id = rm.room_id " +
                 "WHERE rm.homestay_id = ? " +
-                "ORDER BY r.create_time DESC";
+                "ORDER BY r.review_id ASC";
         List<Review> list = new ArrayList<>();
         Connection conn;
         PreparedStatement pstmt = null;
@@ -265,7 +265,7 @@ public class ReviewDAOImpl implements ReviewDAO {
 
     @Override
     public List<Review> selectByGuestId(int guestId) {
-        String sql = "SELECT * FROM reviews WHERE guest_id = ? ORDER BY create_time DESC";
+        String sql = "SELECT * FROM reviews WHERE guest_id = ? ORDER BY review_id ASC";
         List<Review> list = new ArrayList<>();
         Connection conn;
         PreparedStatement pstmt = null;
@@ -404,7 +404,7 @@ public class ReviewDAOImpl implements ReviewDAO {
 
     @Override
     public List<Review> selectLatestReviews(int pageNum, int pageSize) {
-        String sql = "SELECT * FROM reviews WHERE status = 1 ORDER BY create_time DESC LIMIT ?, ?";
+        String sql = "SELECT * FROM reviews WHERE status = 1 ORDER BY review_id ASC LIMIT ?, ?";
         List<Review> list = new ArrayList<>();
         Connection conn;
         PreparedStatement pstmt = null;
@@ -436,7 +436,7 @@ public class ReviewDAOImpl implements ReviewDAO {
                 "JOIN reservations res ON r.reservation_id = res.reservation_id " +
                 "JOIN rooms rm ON res.room_id = rm.room_id " +
                 "WHERE rm.homestay_id = ? AND r.host_reply IS NULL AND r.status = 1 " +
-                "ORDER BY r.create_time DESC";
+                "ORDER BY r.review_id ASC";
         List<Review> list = new ArrayList<>();
         Connection conn;
         PreparedStatement pstmt = null;

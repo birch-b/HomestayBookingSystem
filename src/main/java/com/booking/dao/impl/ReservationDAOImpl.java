@@ -152,7 +152,7 @@ public class ReservationDAOImpl implements ReservationDAO {
 
     @Override
     public List<Reservation> selectAll() {
-        String sql = "SELECT * FROM reservations ORDER BY create_time DESC";
+        String sql = "SELECT * FROM reservations ORDER BY reservation_id ASC";
         List<Reservation> list = new ArrayList<>();
         Connection conn;
         PreparedStatement pstmt = null;
@@ -180,7 +180,7 @@ public class ReservationDAOImpl implements ReservationDAO {
 
     @Override
     public List<Reservation> selectByPage(int pageNum, int pageSize) {
-        String sql = "SELECT * FROM reservations ORDER BY create_time DESC LIMIT ?, ?";
+        String sql = "SELECT * FROM reservations ORDER BY reservation_id ASC LIMIT ?, ?";
         List<Reservation> list = new ArrayList<>();
         Connection conn;
         PreparedStatement pstmt = null;
@@ -363,7 +363,7 @@ public class ReservationDAOImpl implements ReservationDAO {
 
     @Override
     public List<Reservation> selectByGuestId(int guestId) {
-        String sql = "SELECT * FROM reservations WHERE guest_id = ? ORDER BY create_time DESC";
+        String sql = "SELECT * FROM reservations WHERE guest_id = ? ORDER BY reservation_id ASC";
         List<Reservation> list = new ArrayList<>();
         Connection conn;
         PreparedStatement pstmt = null;
@@ -392,7 +392,7 @@ public class ReservationDAOImpl implements ReservationDAO {
 
     @Override
     public List<Reservation> selectByRoomId(int roomId) {
-        String sql = "SELECT * FROM reservations WHERE room_id = ? ORDER BY create_time DESC";
+        String sql = "SELECT * FROM reservations WHERE room_id = ? ORDER BY reservation_id ASC";
         List<Reservation> list = new ArrayList<>();
         Connection conn;
         PreparedStatement pstmt = null;
@@ -424,7 +424,7 @@ public class ReservationDAOImpl implements ReservationDAO {
         String sql = "SELECT r.* FROM reservations r " +
                 "JOIN rooms rm ON r.room_id = rm.room_id " +
                 "WHERE rm.homestay_id = ? " +
-                "ORDER BY r.create_time DESC";
+                "ORDER BY r.reservation_id ASC";
         List<Reservation> list = new ArrayList<>();
         Connection conn;
         PreparedStatement pstmt = null;
@@ -582,7 +582,8 @@ public class ReservationDAOImpl implements ReservationDAO {
             params.add(new java.sql.Date(end.getTime()));
         }
 
-        sql.append("ORDER BY r.create_time DESC LIMIT ?, ?");
+        sql.append("ORDER BY r.reservation_id ASC LIMIT ?, ?");
+
         params.add((pageNum - 1) * pageSize);
         params.add(pageSize);
 

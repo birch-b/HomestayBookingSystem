@@ -77,48 +77,51 @@ public class RoomManageView extends JFrame {
         titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 20));
         titleLabel.setForeground(Color.BLACK);
 
-        backButton = new JButton("返回民宿列表");
+        backButton = new JButton("返回");
         styleButton(backButton);
         titlePanel.add(titleLabel, BorderLayout.CENTER);
         titlePanel.add(backButton, BorderLayout.EAST);
 
         // 筛选面板
-        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         filterPanel.setBackground(AppColors.LIGHT_PURPLE);
 
         JLabel roomNumberLabel = new JLabel("房间号:");
-        roomNumberLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        roomNumberLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         roomNumberLabel.setForeground(Color.BLACK);
         filterPanel.add(roomNumberLabel);
         
         searchField = new JTextField(10);
-        searchField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        searchField.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         searchField.setForeground(Color.BLACK);
         searchField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
+        searchField.setPreferredSize(new Dimension(100, 22));
         filterPanel.add(searchField);
 
         JLabel typeLabel = new JLabel("房型:");
-        typeLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        typeLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         typeLabel.setForeground(Color.BLACK);
         filterPanel.add(typeLabel);
         
         String[] types = {"全部", "单人间", "双人间", "大床房", "套房", "家庭房"};
         typeFilter = new JComboBox<>(types);
-        typeFilter.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        typeFilter.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         typeFilter.setForeground(Color.BLACK);
         typeFilter.setBackground(Color.WHITE);
+        typeFilter.setPreferredSize(new Dimension(80, 22));
         filterPanel.add(typeFilter);
 
         JLabel statusLabel = new JLabel("状态:");
-        statusLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        statusLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         statusLabel.setForeground(Color.BLACK);
         filterPanel.add(statusLabel);
         
         String[] statuses = {"全部", "可用", "已订", "维护"};
         statusFilter = new JComboBox<>(statuses);
-        statusFilter.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        statusFilter.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         statusFilter.setForeground(Color.BLACK);
         statusFilter.setBackground(Color.WHITE);
+        statusFilter.setPreferredSize(new Dimension(80, 22));
         filterPanel.add(statusFilter);
 
         searchButton = new JButton("搜索");
@@ -126,10 +129,10 @@ public class RoomManageView extends JFrame {
         filterPanel.add(searchButton);
 
         // 按钮面板
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 10));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 5));
         buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
 
-        addButton = new JButton("新增房间");
+        addButton = new JButton("新增");
         editButton = new JButton("编辑");
         deleteButton = new JButton("删除");
         refreshButton = new JButton("刷新");
@@ -298,7 +301,8 @@ public class RoomManageView extends JFrame {
         button.setBackground(AppColors.BUTTON_PURPLE);
         button.setForeground(AppColors.DARK_PURPLE);
         button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+        button.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+        button.setPreferredSize(new Dimension(80, 22));
 
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
@@ -523,8 +527,8 @@ public class RoomManageView extends JFrame {
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1;
-        String[] roomTypes = {"SINGLE", "DOUBLE", "TWIN", "SUITE", "FAMILY"};
-        JComboBox<String> roomTypeCombo = new JComboBox<>(roomTypes);
+        String[] roomTypesCN = {"单人间", "大床房", "双人间", "套房", "家庭房"};
+        JComboBox<String> roomTypeCombo = new JComboBox<>(roomTypesCN);
         roomTypeCombo.setFont(new Font("微软雅黑", Font.PLAIN, 13));
         roomTypeCombo.setBackground(Color.WHITE);
         panel.add(roomTypeCombo, gbc);
@@ -595,8 +599,8 @@ public class RoomManageView extends JFrame {
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1;
-        String[] statuses = {"AVAILABLE", "MAINTENANCE"};
-        JComboBox<String> statusCombo = new JComboBox<>(statuses);
+        String[] statusesCN = {"可用", "维护"};
+        JComboBox<String> statusCombo = new JComboBox<>(statusesCN);
         statusCombo.setFont(new Font("微软雅黑", Font.PLAIN, 13));
         statusCombo.setBackground(Color.WHITE);
         panel.add(statusCombo, gbc);
@@ -650,7 +654,18 @@ public class RoomManageView extends JFrame {
                     return;
                 }
                 
-                String roomType = (String) roomTypeCombo.getSelectedItem();
+                // 转换房型（中文转英文）
+                String[] roomTypesCNAdd = {"单人间", "大床房", "双人间", "套房", "家庭房"};
+                String[] roomTypesENAdd = {"SINGLE", "DOUBLE", "TWIN", "SUITE", "FAMILY"};
+                String roomTypeCNAdd = (String) roomTypeCombo.getSelectedItem();
+                String roomType = roomTypesENAdd[0]; // 默认值
+                for (int i = 0; i < roomTypesCNAdd.length; i++) {
+                    if (roomTypesCNAdd[i].equals(roomTypeCNAdd)) {
+                        roomType = roomTypesENAdd[i];
+                        break;
+                    }
+                }
+                
                 String bedType = bedTypeField.getText().trim();
                 if (bedType.isEmpty()) {
                     JOptionPane.showMessageDialog(dialog, "请输入床型", "提示", JOptionPane.WARNING_MESSAGE);
@@ -660,7 +675,19 @@ public class RoomManageView extends JFrame {
                 int area = Integer.parseInt(areaField.getText().trim());
                 int maxPeople = Integer.parseInt(maxPeopleField.getText().trim());
                 double price = Double.parseDouble(priceField.getText().trim());
-                String status = (String) statusCombo.getSelectedItem();
+                
+                // 转换状态（中文转英文）
+                String[] statusesCNAdd = {"可用", "维护"};
+                String[] statusesENAdd = {"AVAILABLE", "MAINTENANCE"};
+                String statusCNAdd = (String) statusCombo.getSelectedItem();
+                String status = statusesENAdd[0]; // 默认值
+                for (int i = 0; i < statusesCNAdd.length; i++) {
+                    if (statusesCNAdd[i].equals(statusCNAdd)) {
+                        status = statusesENAdd[i];
+                        break;
+                    }
+                }
+                
                 String description = descriptionArea.getText().trim();
                 
                 // 创建房间对象

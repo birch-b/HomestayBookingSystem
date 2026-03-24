@@ -57,7 +57,15 @@ public interface ReservationService {
     List<Reservation> searchReservations(String keyword, String status,
                                          Date start, Date end,
                                          int pageNum, int pageSize);
-
+/**
+ * 按日期范围查询订单
+ * @param homestayId 民宿ID（可选，为null时查询所有民宿）
+ * @param status 订单状态（可选，为null时查询所有状态）
+ * @param startDate 开始日期（可选）
+ * @param endDate 结束日期（可选）
+ * @return 符合条件的订单列表
+ */
+List<Reservation> searchReservationsByDateRange(Integer homestayId, String status, Date startDate, Date endDate);
     /**
      * 计算订单总价（考虑定价规则）
      */
