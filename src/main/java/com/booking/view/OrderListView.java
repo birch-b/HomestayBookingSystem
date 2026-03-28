@@ -2,9 +2,13 @@ package com.booking.view;
 
 import com.booking.model.Reservation;
 import com.booking.model.User;
+import com.booking.model.Homestay;
 import com.booking.service.ReservationService;
+import com.booking.service.HomestayService;
 import com.booking.service.impl.ReservationServiceImpl;
+import com.booking.service.impl.HomestayServiceImpl;
 import com.booking.util.AppColors;
+import java.util.ArrayList;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -22,6 +26,7 @@ public class OrderListView extends JFrame {
     private String userRole; // ADMIN, HOST, GUEST
     private int targetId; // 如果是HOST则是homestayId，如果是GUEST则是userId
     private ReservationService reservationService;
+    private HomestayService homestayService;
     private JTable orderTable;
     private DefaultTableModel tableModel;
     private JComboBox<String> statusFilter;
@@ -55,6 +60,7 @@ public class OrderListView extends JFrame {
         this.userRole = role;
         this.targetId = id;
         this.reservationService = new ReservationServiceImpl();
+        this.homestayService = new HomestayServiceImpl();
         initUI();
         loadData();
     }
@@ -308,10 +314,31 @@ public class OrderListView extends JFrame {
                     totalCount = allOrders != null ? allOrders.size() : 0;
                     break;
                 case "HOST":
-                    orderList = reservationService.getHomestayReservations(targetId, currentPage, pageSize);
-                    // 获取总数
-                    List<Reservation> allHostOrders = reservationService.getHomestayReservations(targetId, 1, Integer.MAX_VALUE);
-                    totalCount = allHostOrders != null ? allHostOrders.size() : 0;
+                    // 获取民宿主的所有民宿
+                    List<Homestay> homestays = homestayService.getHomestaysByHostId(currentUser.getUserId());
+                    if (homestays != null && !homestays.isEmpty()) {
+                        // 收集所有民宿的订单
+                        List<Reservation> allHostOrders = new ArrayList<>();
+                        for (Homestay homestay : homestays) {
+                            List<Reservation> homestayOrders = reservationService.getHomestayReservations(homestay.getHomestayId(), 1, Integer.MAX_VALUE);
+                            if (homestayOrders != null && !homestayOrders.isEmpty()) {
+                                allHostOrders.addAll(homestayOrders);
+                            }
+                        }
+                        // 计算总数
+                        totalCount = allHostOrders.size();
+                        // 分页
+                        int startIndex = (currentPage - 1) * pageSize;
+                        int endIndex = Math.min(startIndex + pageSize, allHostOrders.size());
+                        if (startIndex < allHostOrders.size()) {
+                            orderList = allHostOrders.subList(startIndex, endIndex);
+                        } else {
+                            orderList = new ArrayList<>();
+                        }
+                    } else {
+                        orderList = new ArrayList<>();
+                        totalCount = 0;
+                    }
                     break;
                 case "GUEST":
                     orderList = reservationService.getUserReservations(targetId, currentPage, pageSize);
@@ -359,14 +386,44 @@ public class OrderListView extends JFrame {
     }
 
     private void updateStats() {
-        int total = tableModel.getRowCount();
+        // 计算所有订单的总金额，而不仅仅是当前页面的
         double totalAmount = 0;
-        for (int i = 0; i < total; i++) {
-            Object value = tableModel.getValueAt(i, 8);
-            if (value instanceof Double) {
-                totalAmount += (double) value;
-            } else if (value instanceof Number) {
-                totalAmount += ((Number) value).doubleValue();
+        List<Reservation> allOrders = null;
+        
+        if (isSearchMode) {
+            // 搜索模式下获取所有符合条件的订单
+            allOrders = reservationService.searchReservations(
+                null, currentSearchStatus, currentSearchStartDate, currentSearchEndDate, 
+                1, Integer.MAX_VALUE);
+        } else {
+            // 普通模式下根据角色获取所有订单
+            switch (userRole) {
+                case "ADMIN":
+                    allOrders = reservationService.searchReservations(null, null, null, null, 1, Integer.MAX_VALUE);
+                    break;
+                case "HOST":
+                    // 获取民宿主的所有民宿
+                    List<Homestay> homestays = homestayService.getHomestaysByHostId(currentUser.getUserId());
+                    if (homestays != null && !homestays.isEmpty()) {
+                        // 收集所有民宿的订单
+                        allOrders = new ArrayList<>();
+                        for (Homestay homestay : homestays) {
+                            List<Reservation> homestayOrders = reservationService.getHomestayReservations(homestay.getHomestayId(), 1, Integer.MAX_VALUE);
+                            if (homestayOrders != null && !homestayOrders.isEmpty()) {
+                                allOrders.addAll(homestayOrders);
+                            }
+                        }
+                    }
+                    break;
+                case "GUEST":
+                    allOrders = reservationService.getUserReservations(targetId, 1, Integer.MAX_VALUE);
+                    break;
+            }
+        }
+        
+        if (allOrders != null) {
+            for (Reservation r : allOrders) {
+                totalAmount += r.getTotalPrice();
             }
         }
 

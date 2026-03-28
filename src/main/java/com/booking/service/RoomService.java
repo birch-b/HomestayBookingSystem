@@ -73,6 +73,17 @@ public interface RoomService {
                                     int peopleCount, int pageNum, int pageSize);
 
     /**
+     * 根据民宿ID获取可用房间
+     */
+    List<Room> getAvailableRoomsByHomestayId(int homestayId);
+
+    /**
+     * 根据民宿ID搜索可用房间（按日期、人数）
+     */
+    List<Room> searchAvailableRoomsByHomestayId(int homestayId, Date checkIn, Date checkOut,
+                                    int peopleCount, int pageNum, int pageSize);
+
+    /**
      * 统计房间总数
      */
     long getTotalCount();

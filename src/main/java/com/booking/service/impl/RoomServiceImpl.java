@@ -158,6 +158,52 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
+    public List<Room> getAvailableRoomsByHomestayId(int homestayId) {
+        // 获取民宿的所有房间
+        List<Room> rooms = roomDAO.selectByHomestayId(homestayId);
+        List<Room> availableRooms = new ArrayList<>();
+
+        // 筛选可用房间
+        for (Room room : rooms) {
+            if ("AVAILABLE".equals(room.getStatus())) {
+                availableRooms.add(room);
+            }
+        }
+
+        return availableRooms;
+    }
+
+    @Override
+    public List<Room> searchAvailableRoomsByHomestayId(int homestayId, Date checkIn, Date checkOut,
+                                           int peopleCount, int pageNum, int pageSize) {
+        // 先获取民宿的所有房间
+        List<Room> allRooms = roomDAO.selectByHomestayId(homestayId);
+        List<Room> availableRooms = new ArrayList<>();
+
+        // 逐个检查日期冲突和人数
+        for (Room room : allRooms) {
+            if (room.getMaxPeople() >= peopleCount) {
+                boolean available = reservationDAO.checkRoomAvailable(
+                        room.getRoomId(), checkIn, checkOut
+                );
+                if (available) {
+                    availableRooms.add(room);
+                }
+            }
+        }
+
+        // 分页
+        int start = (pageNum - 1) * pageSize;
+        int end = Math.min(start + pageSize, availableRooms.size());
+
+        if (start >= availableRooms.size()) {
+            return new ArrayList<>();
+        }
+
+        return availableRooms.subList(start, end);
+    }
+
+    @Override
     public long getTotalCount() {
         return roomDAO.count();
     }

@@ -1,131 +1,152 @@
 package com.booking.view;
 
 import com.booking.model.User;
+import com.booking.model.Homestay;
+import com.booking.service.HomestayService;
+import com.booking.service.impl.HomestayServiceImpl;
 import com.booking.util.AppColors;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 /**
- * 游客界面
+ * 游客界面（最终版：大布局 + 大按钮 + 固定3列 + 自适应宽度）
  */
 public class GuestView extends MainView {
+
+    private HomestayService homestayService;
 
     public GuestView(User user) {
         super(user, "游客中心");
     }
 
     @Override
-    protected void initMenu() {
-        JMenuBar menuBar = new JMenuBar();
-        menuBar.setBackground(AppColors.PRIMARY_PURPLE);
-        menuBar.setBorder(BorderFactory.createLineBorder(AppColors.PRIMARY_PURPLE));
-
-        // 民宿浏览
-        JMenu browseMenu = new JMenu("民宿浏览");
-        browseMenu.setForeground(AppColors.WHITE);
-        browseMenu.setFont(new Font("微软雅黑", Font.BOLD, 14));
-
-        JMenuItem allHomestayItem = new JMenuItem("所有民宿");
-        JMenuItem searchItem = new JMenuItem("搜索民宿");
-        JMenuItem cityItem = new JMenuItem("按城市浏览");
-        styleMenuItem(allHomestayItem);
-        styleMenuItem(searchItem);
-        styleMenuItem(cityItem);
-
-        browseMenu.add(allHomestayItem);
-        browseMenu.add(searchItem);
-        browseMenu.add(cityItem);
-
-        // 我的订单
-        JMenu orderMenu = new JMenu("我的订单");
-        orderMenu.setForeground(AppColors.WHITE);
-        orderMenu.setFont(new Font("微软雅黑", Font.BOLD, 14));
-
-        JMenuItem myOrderItem = new JMenuItem("订单列表");
-        JMenuItem pendingOrderItem = new JMenuItem("待支付");
-        JMenuItem historyOrderItem = new JMenuItem("历史订单");
-        styleMenuItem(myOrderItem);
-        styleMenuItem(pendingOrderItem);
-        styleMenuItem(historyOrderItem);
-
-        orderMenu.add(myOrderItem);
-        orderMenu.add(pendingOrderItem);
-        orderMenu.add(historyOrderItem);
-
-        // 我的评价
-        JMenu reviewMenu = new JMenu("我的评价");
-        reviewMenu.setForeground(AppColors.WHITE);
-        reviewMenu.setFont(new Font("微软雅黑", Font.BOLD, 14));
-
-        JMenuItem myReviewItem = new JMenuItem("我的评价");
-        JMenuItem addReviewItem = new JMenuItem("发表评价");
-        styleMenuItem(myReviewItem);
-        styleMenuItem(addReviewItem);
-
-        reviewMenu.add(myReviewItem);
-        reviewMenu.add(addReviewItem);
-
-        // 个人中心
-        JMenu profileMenu = new JMenu("个人中心");
-        profileMenu.setForeground(AppColors.WHITE);
-        profileMenu.setFont(new Font("微软雅黑", Font.BOLD, 14));
-
-        JMenuItem infoItem = new JMenuItem("个人信息");
-        JMenuItem passwordItem = new JMenuItem("修改密码");
-        styleMenuItem(infoItem);
-        styleMenuItem(passwordItem);
-
-        profileMenu.add(infoItem);
-        profileMenu.add(passwordItem);
-
-        menuBar.add(browseMenu);
-        menuBar.add(orderMenu);
-        menuBar.add(reviewMenu);
-        menuBar.add(profileMenu);
-
-        setJMenuBar(menuBar);
-
-        // ========== 添加菜单点击事件 ==========
-        allHomestayItem.addActionListener(e -> openAllHomestay());
-        searchItem.addActionListener(e -> openSearchHomestay());
-        cityItem.addActionListener(e -> openCityBrowse());
-        myOrderItem.addActionListener(e -> openMyOrders());
-        pendingOrderItem.addActionListener(e -> openPendingOrders());
-        historyOrderItem.addActionListener(e -> openHistoryOrders());
-        myReviewItem.addActionListener(e -> openMyReviews());
-        addReviewItem.addActionListener(e -> openAddReview());
-        infoItem.addActionListener(e -> openPersonalInfo());
-        passwordItem.addActionListener(e -> openChangePassword());
-    }
+    protected void initMenu() {}
 
     @Override
     protected void initContent() {
+
+        homestayService = new HomestayServiceImpl();
+
+        contentPanel.setLayout(new BorderLayout());
         contentPanel.setBackground(AppColors.LIGHT_PURPLE);
 
-        // 欢迎标签
-        JLabel welcomeLabel = new JLabel("欢迎游客 " + currentUser.getRealName(), JLabel.CENTER);
-        welcomeLabel.setFont(new Font("微软雅黑", Font.BOLD, 24));
-        welcomeLabel.setForeground(AppColors.PRIMARY_PURPLE);
+        // ✅ 监听窗口变化（实现自适应）
+        addComponentListener(new java.awt.event.ComponentAdapter() {
+            public void componentResized(java.awt.event.ComponentEvent evt) {
+                updateLayout();
+            }
+        });
 
-        // 快捷操作面板
-        JPanel quickPanel = new JPanel(new GridLayout(2, 3, 20, 20));
+        updateLayout();
+    }
+
+    private void updateLayout() {
+
+        contentPanel.removeAll();
+
+        int width = getWidth();
+
+        // ================= 主容器 =================
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBackground(AppColors.LIGHT_PURPLE);
+        int padding = Math.max(15, width / 30);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(padding, padding, padding, padding));
+
+        // 页面整体宽度自适应
+        mainPanel.setMaximumSize(new Dimension(Math.max(1000, width - 50), Integer.MAX_VALUE));
+
+        // ================= 欢迎 =================
+        JLabel welcomeLabel = new JLabel("欢迎游客 " + currentUser.getRealName(), JLabel.CENTER);
+        welcomeLabel.setFont(new Font("微软雅黑", Font.BOLD, Math.min(28, width / 30)));
+        welcomeLabel.setForeground(AppColors.PRIMARY_PURPLE);
+        welcomeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // ================= 搜索 =================
+        JPanel searchPanel = new JPanel();
+        // 根据宽度调整搜索面板布局
+        if (width < 700) {
+            searchPanel.setLayout(new GridLayout(3, 2, 10, 10));
+        } else {
+            searchPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 15, 15));
+        }
+        searchPanel.setBackground(AppColors.LIGHT_PURPLE);
+        searchPanel.setBorder(BorderFactory.createTitledBorder("快速搜索民宿"));
+        searchPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JTextField cityField = new JTextField(12);
+        JTextField dateField = new JTextField("2026-03-20", 12);
+        JTextField peopleField = new JTextField("2", 4);
+
+        JButton searchBtn = new JButton("搜索");
+        searchBtn.setFont(new Font("微软雅黑", Font.BOLD, 14));
+
+        searchBtn.addActionListener(e -> {
+            openSearchResult(
+                    cityField.getText(),
+                    dateField.getText(),
+                    peopleField.getText()
+            );
+        });
+
+        if (width < 700) {
+            searchPanel.add(new JLabel("城市:"));
+            searchPanel.add(cityField);
+            searchPanel.add(new JLabel("日期:"));
+            searchPanel.add(dateField);
+            searchPanel.add(new JLabel("人数:"));
+            searchPanel.add(peopleField);
+            // 单独添加搜索按钮
+            JPanel searchButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+            searchButtonPanel.setBackground(AppColors.LIGHT_PURPLE);
+            searchButtonPanel.add(searchBtn);
+            mainPanel.add(searchPanel);
+            mainPanel.add(searchButtonPanel);
+        } else {
+            searchPanel.add(new JLabel("城市:"));
+            searchPanel.add(cityField);
+            searchPanel.add(new JLabel("日期:"));
+            searchPanel.add(dateField);
+            searchPanel.add(new JLabel("人数:"));
+            searchPanel.add(peopleField);
+            searchPanel.add(searchBtn);
+            mainPanel.add(searchPanel);
+        }
+
+        searchPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
+
+        // ================= 快捷按钮 =================
+        JPanel quickPanel = new JPanel();
+        // 根据宽度调整按钮布局
+        int rows = 2;
+        int cols = 3;
+        if (width < 700) {
+            rows = 3;
+            cols = 2;
+        }
+        quickPanel.setLayout(new GridLayout(rows, cols, 20, 20));
         quickPanel.setBackground(AppColors.LIGHT_PURPLE);
-        quickPanel.setBorder(BorderFactory.createEmptyBorder(30, 50, 30, 50));
+        quickPanel.setBorder(BorderFactory.createEmptyBorder(20, padding, 20, padding));
+        quickPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         String[] buttons = {"浏览民宿", "搜索民宿", "我的订单", "我的评价", "个人信息", "立即预订"};
-        for (String btnText : buttons) {
-            JButton btn = new JButton(btnText);
-            btn.setFont(new Font("微软雅黑", Font.BOLD, 16));
-            btn.setBackground(AppColors.BUTTON_PURPLE);
-            btn.setForeground(Color.WHITE);
+
+        for (String text : buttons) {
+            JButton btn = new JButton(text);
+
+            // 按钮大小自适应
+            int btnWidth = Math.max(100, width / (cols + 3));
+            int btnHeight = Math.max(50, width / 15);
+            btn.setFont(new Font("微软雅黑", Font.BOLD, Math.min(16, width / 40)));
+            btn.setPreferredSize(new Dimension(btnWidth, btnHeight));
             btn.setFocusPainted(false);
-            btn.setPreferredSize(new Dimension(150, 80));
 
             btn.addActionListener(e -> {
-                switch (btnText) {
+                switch (text) {
                     case "浏览民宿": openAllHomestay(); break;
-                    case "搜索民宿": openSearchHomestay(); break;
+                    case "搜索民宿": openReservation(); break;
                     case "我的订单": openMyOrders(); break;
                     case "我的评价": openMyReviews(); break;
                     case "个人信息": openPersonalInfo(); break;
@@ -136,173 +157,87 @@ public class GuestView extends MainView {
             quickPanel.add(btn);
         }
 
-        // 搜索面板
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-        searchPanel.setBackground(AppColors.LIGHT_PURPLE);
-        searchPanel.setBorder(BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(AppColors.PRIMARY_PURPLE),
-                "快速搜索民宿",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new Font("微软雅黑", Font.BOLD, 16),
-                AppColors.PRIMARY_PURPLE
-        ));
-
-        JTextField cityField = new JTextField(10);
-        cityField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        cityField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
-
-        JTextField dateField = new JTextField(10);
-        dateField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        dateField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
-        dateField.setText("2026-03-20");
-
-        JTextField peopleField = new JTextField(5);
-        peopleField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        peopleField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
-        peopleField.setText("2");
-
-        JButton searchBtn = new JButton("搜索");
-        searchBtn.setFont(new Font("微软雅黑", Font.BOLD, 14));
-        searchBtn.setBackground(AppColors.BUTTON_PURPLE);
-        searchBtn.setForeground(Color.WHITE);
-        searchBtn.setFocusPainted(false);
-        searchBtn.setBorder(BorderFactory.createEmptyBorder(8, 20, 8, 20));
-
-        searchBtn.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                searchBtn.setBackground(AppColors.HOVER_PURPLE);
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                searchBtn.setBackground(AppColors.BUTTON_PURPLE);
-            }
-        });
-
-        searchBtn.addActionListener(e -> {
-            String city = cityField.getText().trim();
-            String date = dateField.getText().trim();
-            String people = peopleField.getText().trim();
-            openSearchResult(city, date, people);
-        });
-
-        searchPanel.add(new JLabel("城市:"));
-        searchPanel.add(cityField);
-        searchPanel.add(new JLabel("日期:"));
-        searchPanel.add(dateField);
-        searchPanel.add(new JLabel("人数:"));
-        searchPanel.add(peopleField);
-        searchPanel.add(searchBtn);
-
-        // 推荐民宿
-        JPanel recommendPanel = new JPanel(new BorderLayout());
+        // ================= 推荐民宿 =================
+        JPanel recommendPanel = new JPanel();
+        // 根据宽度调整推荐民宿布局
+        int cardCols = 4;
+        if (width < 900) cardCols = 3;
+        if (width < 700) cardCols = 2;
+        if (width < 400) cardCols = 1;
+        recommendPanel.setLayout(new GridLayout(1, cardCols, 20, 15));
         recommendPanel.setBackground(AppColors.LIGHT_PURPLE);
-        recommendPanel.setBorder(BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(AppColors.PRIMARY_PURPLE),
-                "推荐民宿",
-                javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION,
-                javax.swing.border.TitledBorder.DEFAULT_POSITION,
-                new Font("微软雅黑", Font.BOLD, 16),
-                AppColors.PRIMARY_PURPLE
-        ));
+        recommendPanel.setBorder(BorderFactory.createTitledBorder("推荐民宿"));
+        recommendPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JPanel recommendList = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 10));
-        recommendList.setBackground(AppColors.LIGHT_PURPLE);
+        List<Homestay> list = homestayService.getTopRatedHomestays(cardCols);
 
-        String[] recNames = {"云中山居", "海边小筑", "山里人家", "溪畔小筑"};
-        for (String name : recNames) {
-            JPanel card = new JPanel(new BorderLayout());
-            card.setBackground(AppColors.WHITE);
-            card.setBorder(BorderFactory.createLineBorder(AppColors.PRIMARY_PURPLE));
-            card.setPreferredSize(new Dimension(180, 100));
+        if (list != null) {
+            for (Homestay h : list) {
 
-            JLabel nameLabel = new JLabel(name, JLabel.CENTER);
-            nameLabel.setFont(new Font("微软雅黑", Font.BOLD, 14));
-            nameLabel.setForeground(AppColors.PRIMARY_PURPLE);
+                JPanel card = new JPanel(new BorderLayout());
+                card.setBorder(BorderFactory.createLineBorder(Color.GRAY));
 
-            JButton viewBtn = new JButton("查看");
-            viewBtn.setFont(new Font("微软雅黑", Font.PLAIN, 12));
-            viewBtn.setBackground(AppColors.BUTTON_PURPLE);
-            viewBtn.setForeground(Color.WHITE);
-            viewBtn.setFocusPainted(false);
+                JLabel name = new JLabel(h.getName(), JLabel.CENTER);
+                name.setFont(new Font("微软雅黑", Font.BOLD, Math.min(14, width / 40)));
 
-            viewBtn.addActionListener(e -> openHomestayDetail(name));
+                JButton btn = new JButton("查看");
+                btn.setFont(new Font("微软雅黑", Font.PLAIN, 13));
 
-            card.add(nameLabel, BorderLayout.CENTER);
-            card.add(viewBtn, BorderLayout.SOUTH);
+                btn.addActionListener(e ->
+                        openHomestayDetail(h.getHomestayId())
+                );
 
-            recommendList.add(card);
+                card.add(name, BorderLayout.CENTER);
+                card.add(btn, BorderLayout.SOUTH);
+
+                recommendPanel.add(card);
+            }
         }
 
-        recommendPanel.add(new JScrollPane(recommendList), BorderLayout.CENTER);
+        // 卡片区域高度自适应
+        recommendPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Math.min(300, width / 2)));
 
-        // 主面板
-        JPanel mainPanel = new JPanel(new BorderLayout(20, 20));
-        mainPanel.setBackground(AppColors.LIGHT_PURPLE);
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
-        mainPanel.add(welcomeLabel, BorderLayout.NORTH);
-        mainPanel.add(quickPanel, BorderLayout.CENTER);
-        mainPanel.add(searchPanel, BorderLayout.CENTER);
-        mainPanel.add(recommendPanel, BorderLayout.SOUTH);
+        // ================= 组装 =================
+        mainPanel.add(welcomeLabel);
+        mainPanel.add(Box.createVerticalStrut(15));
 
-        contentPanel.add(mainPanel, BorderLayout.CENTER);
+        if (width >= 700) {
+            mainPanel.add(searchPanel);
+        }
+        mainPanel.add(Box.createVerticalStrut(20));
+
+        mainPanel.add(quickPanel);
+        mainPanel.add(Box.createVerticalStrut(20));
+
+        mainPanel.add(recommendPanel);
+
+        // ================= 居中 =================
+        JPanel wrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        wrapper.setBackground(AppColors.LIGHT_PURPLE);
+        wrapper.add(mainPanel);
+
+        contentPanel.add(wrapper, BorderLayout.CENTER);
+
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
-    private void styleMenuItem(JMenuItem item) {
-        item.setFont(new Font("微软雅黑", Font.PLAIN, 13));
-        item.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
-        item.setOpaque(true);
-        item.setBackground(AppColors.PRIMARY_PURPLE);
-        item.setForeground(AppColors.WHITE);
-
-        item.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                item.setBackground(AppColors.HOVER_PURPLE);
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                item.setBackground(AppColors.PRIMARY_PURPLE);
-            }
-        });
-    }
-
-    // ========== 界面跳转方法 ==========
-    private void openAllHomestay() {
-        JOptionPane.showMessageDialog(this, "浏览所有民宿", "提示", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void openSearchHomestay() {
-        openReservation();
-    }
-
-    private void openCityBrowse() {
-        JOptionPane.showMessageDialog(this, "按城市浏览民宿", "提示", JOptionPane.INFORMATION_MESSAGE);
-    }
+    // ================= 跳转 =================
 
     private void openMyOrders() {
         new OrderListView(currentUser, "GUEST", currentUser.getUserId()).setVisible(true);
-    }
-
-    private void openPendingOrders() {
-        JOptionPane.showMessageDialog(this, "待支付订单", "提示", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void openHistoryOrders() {
-        JOptionPane.showMessageDialog(this, "历史订单", "提示", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void openMyReviews() {
         new ReviewView(currentUser, "GUEST", currentUser.getUserId()).setVisible(true);
     }
 
-    private void openAddReview() {
-        JOptionPane.showMessageDialog(this, "发表评价", "提示", JOptionPane.INFORMATION_MESSAGE);
+    private void openAllHomestay() {
+        JOptionPane.showMessageDialog(this, "浏览民宿");
     }
 
     private void openPersonalInfo() {
-        JOptionPane.showMessageDialog(this, "个人信息", "提示", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void openChangePassword() {
-        JOptionPane.showMessageDialog(this, "修改密码", "提示", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "个人信息");
     }
 
     private void openReservation() {
@@ -310,12 +245,11 @@ public class GuestView extends MainView {
     }
 
     private void openSearchResult(String city, String date, String people) {
-        String message = String.format("搜索条件:\n城市: %s\n日期: %s\n人数: %s", city, date, people);
-        JOptionPane.showMessageDialog(this, message, "搜索民宿", JOptionPane.INFORMATION_MESSAGE);
-        openReservation();
+        JOptionPane.showMessageDialog(this,
+                "搜索：" + city + " " + date + " " + people);
     }
 
-    private void openHomestayDetail(String homestayName) {
-        JOptionPane.showMessageDialog(this, "查看民宿详情: " + homestayName, "提示", JOptionPane.INFORMATION_MESSAGE);
+    private void openHomestayDetail(int id) {
+        JOptionPane.showMessageDialog(this, "查看民宿ID: " + id);
     }
 }

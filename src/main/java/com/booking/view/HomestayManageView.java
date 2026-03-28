@@ -1,9 +1,12 @@
 package com.booking.view;
 
 import com.booking.model.Homestay;
+import com.booking.model.Room;
 import com.booking.model.User;
 import com.booking.service.HomestayService;
+import com.booking.service.RoomService;
 import com.booking.service.impl.HomestayServiceImpl;
+import com.booking.service.impl.RoomServiceImpl;
 import com.booking.util.AppColors;
 
 import javax.swing.*;
@@ -781,9 +784,26 @@ public class HomestayManageView extends JFrame {
         
         // 权限检查
         Homestay homestay = homestayService.getHomestayById(homestayId);
+        if (homestay == null) {
+            JOptionPane.showMessageDialog(this, "未找到该民宿数据", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         if (!"ADMIN".equals(currentUser.getRole()) && 
             homestay.getHostId() != currentUser.getUserId()) {
             JOptionPane.showMessageDialog(this, "您没有权限删除此民宿", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // 删除前检查：该民宿下是否还有房间
+        RoomService roomService = new RoomServiceImpl();
+        List<Room> rooms = roomService.getRoomsByHomestayId(homestayId);
+        if (rooms != null && !rooms.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "该民宿下已有房间（" + rooms.size() + " 间），请先删除房间后再删除民宿。",
+                    "无法删除",
+                    JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 

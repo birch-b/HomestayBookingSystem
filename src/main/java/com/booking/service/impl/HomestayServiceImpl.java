@@ -6,6 +6,7 @@ import com.booking.dao.impl.HomestayDAOImpl;
 import com.booking.dao.impl.ReviewDAOImpl;
 import com.booking.dao.impl.RoomDAOImpl;
 import com.booking.model.Homestay;
+import com.booking.model.Room;
 import com.booking.model.Review;
 import com.booking.service.HomestayService;
 
@@ -58,12 +59,19 @@ public class HomestayServiceImpl implements HomestayService{
 
     @Override
     public boolean deleteHomestay(int homestayId) {
-    Homestay homestay=homestayDAO.selectById(homestayId);
-    if (homestay==null) {
-        return false;
-    }
-    int result = homestayDAO.deleteById(homestayId);
-    return result>0;
+        Homestay homestay = homestayDAO.selectById(homestayId);
+        if (homestay == null) {
+            return false;
+        }
+
+        // 删除前检查：该民宿下是否仍存在房间，避免触发外键约束失败
+        List<Room> rooms = roomDAO.selectByHomestayId(homestayId);
+        if (rooms != null && !rooms.isEmpty()) {
+            return false;
+        }
+
+        int result = homestayDAO.deleteById(homestayId);
+        return result > 0;
     }
 
     @Override
