@@ -137,14 +137,22 @@ public class ReviewServiceImpl implements ReviewService {
     public List<Review> getReviewsByGuestId(int guestId, int pageNum, int pageSize) {
         List<Review> allReviews = reviewDAO.selectByGuestId(guestId);
 
-        int start = (pageNum - 1) * pageSize;
-        int end = Math.min(start + pageSize, allReviews.size());
+        // 只显示状态为1（显示）的评价
+        List<Review> visibleReviews = new ArrayList<>();
+        for (Review r : allReviews) {
+            if (r.getStatus() == 1) {
+                visibleReviews.add(r);
+            }
+        }
 
-        if (start >= allReviews.size()) {
+        int start = (pageNum - 1) * pageSize;
+        int end = Math.min(start + pageSize, visibleReviews.size());
+
+        if (start >= visibleReviews.size()) {
             return new ArrayList<>();
         }
 
-        return allReviews.subList(start, end);
+        return visibleReviews.subList(start, end);
     }
     /**
      * 查询最新评价（分页）

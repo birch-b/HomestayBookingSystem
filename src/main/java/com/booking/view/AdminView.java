@@ -180,7 +180,9 @@ public class AdminView extends MainView {
         try {
             ReservationService reservationService = new ReservationServiceImpl();
             // 使用searchReservations方法获取所有订单，然后计算数量
-            int count = reservationService.searchReservations(null, null, null, null, 1, Integer.MAX_VALUE).size();
+            int count = reservationService.searchReservations(
+    null, null, null, null, null, 1, Integer.MAX_VALUE
+).size();
             return String.valueOf(count);
         } catch (Exception e) {
             return "--";

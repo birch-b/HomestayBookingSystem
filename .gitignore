@@ -53,31 +53,32 @@ build/
 
 # æ“ä½œç³»ç»Ÿæ–‡ä»¶
 .DS_Store
-Thumbs.db# Êı¾İ¿âÎÄ¼ş
+Thumbs.db
+# æ•°æ®åº“æ–‡ä»¶
 *.db
 *.sqlite
 *.sqlite3
 
-# ÈÕÖ¾ÎÄ¼ş
+# æ—¥å¿—æ–‡ä»¶
 *.log
 logs/
 
-# ÁÙÊ±ÎÄ¼ş
+# ä¸´æ—¶æ–‡ä»¶
 *.tmp
 *.swp
 *.swo
 *~
 
-# »·¾³ÅäÖÃÎÄ¼ş
+# ç¯å¢ƒé…ç½®æ–‡ä»¶
 .env
 .env.local
 .env.*.local
 application-local.properties
 
-# ±¸·İÎÄ¼ş
+# å¤‡ä»½æ–‡ä»¶
 *.bak
 *.backup
 
-# ²âÊÔ±¨¸æ
+# æµ‹è¯•æŠ¥å‘Š
 test-output/
 target/surefire-reports/

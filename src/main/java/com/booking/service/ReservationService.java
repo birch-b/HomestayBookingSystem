@@ -54,9 +54,15 @@ public interface ReservationService {
     /**
      * 搜索预订（多条件分页）
      */
-    List<Reservation> searchReservations(String keyword, String status,
-                                         Date start, Date end,
-                                         int pageNum, int pageSize);
+  List<Reservation> searchReservations(
+        Integer userId,  
+        String keyword,
+        String status,
+        Date start,
+        Date end,
+        int pageNum,
+        int pageSize
+);
 /**
  * 按日期范围查询订单
  * @param homestayId 民宿ID（可选，为null时查询所有民宿）

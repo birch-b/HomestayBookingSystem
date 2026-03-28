@@ -311,24 +311,58 @@ public class ReservationServiceImpl implements ReservationService{
         return allReservations.subList(startIndex, endIndex);
     }
 
-    @Override
-    public List<Reservation> searchReservations(String keyword, String status, Date start, Date end, int pageNum, int pageSize) {
-        // 如果没有搜索条件，直接获取所有订单并在内存中分页
-        if ((keyword == null || keyword.trim().isEmpty()) &&
-            (status == null || status.trim().isEmpty()) &&
-            start == null && end == null) {
-            List<Reservation> allReservations = reservationDAO.selectAll();
-            int startIndex = (pageNum - 1) * pageSize;
-            int endIndex = Math.min(startIndex + pageSize, allReservations.size());
-            if (startIndex >= allReservations.size()) {
-                return new ArrayList<>();
-            }
-            return allReservations.subList(startIndex, endIndex);
-        }
-        // 有搜索条件时使用DAO的搜索方法
-        return reservationDAO.searchReservations(keyword, status, start, end, pageNum, pageSize);
+@Override
+public List<Reservation> searchReservations(
+        Integer userId,
+        String keyword,
+        String status,
+        Date start,
+        Date end,
+        int pageNum,
+        int pageSize) {
+
+    // 统一处理空字符串
+    if (keyword != null && keyword.trim().isEmpty()) {
+        keyword = null;
+    }
+    if (status != null && status.trim().isEmpty()) {
+        status = null;
     }
 
+    List<Reservation> allReservations;
+
+    // ✅ 如果传了userId → 只查该用户（游客）
+    if (userId != null) {
+        allReservations = reservationDAO.selectByGuestId(userId);
+    } else {
+        // 管理员 or 其他情况
+        allReservations = reservationDAO.selectAll();
+    }
+
+    List<Reservation> filtered = new ArrayList<>();
+
+    for (Reservation r : allReservations) {
+
+        // 状态过滤
+        if (status != null && !status.equals(r.getStatus())) continue;
+
+        // 日期过滤
+        if (start != null && r.getCheckInDate().before(start)) continue;
+        if (end != null && r.getCheckOutDate().after(end)) continue;
+
+        filtered.add(r);
+    }
+
+    // 分页
+    int startIndex = (pageNum - 1) * pageSize;
+    int endIndex = Math.min(startIndex + pageSize, filtered.size());
+
+    if (startIndex >= filtered.size()) {
+        return new ArrayList<>();
+    }
+
+    return filtered.subList(startIndex, endIndex);
+}
     @Override
     public List<Reservation> searchReservationsByDateRange(Integer homestayId, String status, Date startDate, Date endDate) {
         // 实现按日期范围查询订单的逻辑

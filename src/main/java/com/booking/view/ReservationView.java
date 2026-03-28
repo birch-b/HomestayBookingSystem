@@ -361,7 +361,6 @@ private String getStatusName(String status) {
     String checkInStr = checkInField.getText().trim();
     String checkOutStr = checkOutField.getText().trim();
     String peopleStr = peopleField.getText().trim();
-        // TODO: 调用Service搜索可用房间
         // 验证输入
         if (homestayId == null && city.isEmpty()) {
             JOptionPane.showMessageDialog(this, "请输入城市", "提示", JOptionPane.WARNING_MESSAGE);

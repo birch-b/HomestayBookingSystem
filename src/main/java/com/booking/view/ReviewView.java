@@ -2,9 +2,14 @@ package com.booking.view;
 
 import com.booking.model.Review;
 import com.booking.model.User;
+import com.booking.model.Reservation;
 import com.booking.service.ReviewService;
+import com.booking.service.ReservationService;
 import com.booking.service.impl.ReviewServiceImpl;
+import com.booking.service.impl.ReservationServiceImpl;
 import com.booking.util.AppColors;
+import java.util.ArrayList;
+import java.util.Date;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -22,6 +27,7 @@ public class ReviewView extends JFrame {
     private String userRole; // ADMIN, HOST, GUEST
     private int targetId; // 如果是HOST则是homestayId，如果是GUEST则是userId
     private ReviewService reviewService;
+    private ReservationService reservationService;
 
     private JTable reviewTable;
     private DefaultTableModel tableModel;
@@ -51,6 +57,7 @@ public class ReviewView extends JFrame {
         this.userRole = role;
         this.targetId = id;
         this.reviewService = new ReviewServiceImpl();
+        this.reservationService = new ReservationServiceImpl();
         initUI();
         loadData();
     }
@@ -129,6 +136,11 @@ public class ReviewView extends JFrame {
             styleButton(addButton);
             buttonPanel.add(addButton);
         }
+
+        // 添加删除按钮
+        JButton deleteButton = new JButton("删除");
+        styleButton(deleteButton);
+        buttonPanel.add(deleteButton);
 
         backButton = new JButton("返回");
         styleButton(backButton);
@@ -268,6 +280,9 @@ public class ReviewView extends JFrame {
         if ("GUEST".equals(userRole) && addButton != null) {
             addButton.addActionListener(e -> addReview());
         }
+
+        // 删除按钮事件
+        deleteButton.addActionListener(e -> deleteReview());
         
         // 分页事件
         firstPageButton.addActionListener(e -> goToFirstPage());
@@ -420,6 +435,9 @@ public class ReviewView extends JFrame {
         }
         
         if (searchResult != null) {
+            // 只显示状态为1（显示）的评价
+            searchResult.removeIf(r -> r.getStatus() != 1);
+            
             // 按评分筛选
             if (!"全部".equals(rating)) {
                 int ratingValue = Integer.parseInt(rating.substring(0, 1));
@@ -546,8 +564,186 @@ public class ReviewView extends JFrame {
     }
 
     private void addReview() {
-        JOptionPane.showMessageDialog(this, "发表评价功能待实现\n需要选择已完成且未评价的订单",
-                "提示", JOptionPane.INFORMATION_MESSAGE);
+        // 获取用户的所有订单
+        List<Reservation> allOrders = reservationService.getUserReservations(targetId, 1, Integer.MAX_VALUE);
+        
+        // 过滤出已完成的订单
+        List<Reservation> completedOrders = new ArrayList<>();
+        if (allOrders != null) {
+            for (Reservation order : allOrders) {
+                if ("COMPLETED".equals(order.getStatus())) {
+                    completedOrders.add(order);
+                }
+            }
+        }
+        
+        if (completedOrders == null || completedOrders.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "没有已完成的订单", "提示", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        // 创建订单选择对话框
+        JDialog orderDialog = new JDialog(this, "选择订单", true);
+        orderDialog.setSize(500, 400);
+        orderDialog.setLocationRelativeTo(this);
+        
+        JPanel orderPanel = new JPanel(new BorderLayout());
+        orderPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        orderPanel.setBackground(AppColors.LIGHT_PURPLE);
+        
+        DefaultListModel<String> orderListModel = new DefaultListModel<>();
+        for (Reservation order : completedOrders) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            String orderInfo = "订单号: " + order.getReservationNo() + ", 民宿: 民宿" + order.getRoomId() + ", 入住: " + sdf.format(order.getCheckInDate());
+            orderListModel.addElement(orderInfo);
+        }
+        
+        JList<String> orderList = new JList<>(orderListModel);
+        orderList.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        orderList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        
+        JButton selectBtn = new JButton("选择");
+        selectBtn.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        
+        selectBtn.addActionListener(e -> {
+            int selectedIndex = orderList.getSelectedIndex();
+            if (selectedIndex >= 0) {
+                Reservation selectedOrder = completedOrders.get(selectedIndex);
+                orderDialog.dispose();
+                showReviewForm(selectedOrder);
+            } else {
+                JOptionPane.showMessageDialog(orderDialog, "请选择一个订单", "提示", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
+        buttonPanel.add(selectBtn);
+        
+        orderPanel.add(new JScrollPane(orderList), BorderLayout.CENTER);
+        orderPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        orderDialog.add(orderPanel);
+        orderDialog.setVisible(true);
+    }
+    
+    private void showReviewForm(Reservation order) {
+        // 创建评价表单对话框
+        JDialog reviewDialog = new JDialog(this, "发表评价", true);
+        reviewDialog.setSize(600, 450);
+        reviewDialog.setLocationRelativeTo(this);
+        
+        JPanel reviewPanel = new JPanel(new GridBagLayout());
+        reviewPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        reviewPanel.setBackground(AppColors.LIGHT_PURPLE);
+        
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        
+        // 订单信息
+        JLabel orderLabel = new JLabel("订单号: " + order.getReservationNo());
+        orderLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        reviewPanel.add(orderLabel, gbc);
+        
+        // 评分
+        JLabel ratingLabel = new JLabel("评分:");
+        ratingLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
+        reviewPanel.add(ratingLabel, gbc);
+        
+        JComboBox<Integer> ratingComboBox = new JComboBox<>(new Integer[]{1, 2, 3, 4, 5});
+        ratingComboBox.setSelectedIndex(4); // 默认5星
+        ratingComboBox.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        gbc.gridx = 1;
+        reviewPanel.add(ratingComboBox, gbc);
+        
+        // 评价内容
+        JLabel commentLabel = new JLabel("评价内容:");
+        commentLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        reviewPanel.add(commentLabel, gbc);
+        
+        JTextArea commentArea = new JTextArea(8, 40);
+        commentArea.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        commentArea.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
+        commentArea.setLineWrap(true);
+        commentArea.setWrapStyleWord(true);
+        JScrollPane commentScroll = new JScrollPane(commentArea);
+        commentScroll.setPreferredSize(new Dimension(400, 150));
+        gbc.gridx = 1;
+        reviewPanel.add(commentScroll, gbc);
+        
+        // 提交按钮
+        JButton submitBtn = new JButton("提交评价");
+        submitBtn.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        
+        submitBtn.addActionListener(e -> {
+            int rating = (int) ratingComboBox.getSelectedItem();
+            String comment = commentArea.getText().trim();
+            
+            if (comment.isEmpty()) {
+                JOptionPane.showMessageDialog(reviewDialog, "请输入评价内容", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            // 创建评价对象
+            Review review = new Review();
+            review.setReservationId(order.getReservationId());
+            review.setGuestId(targetId);
+            review.setRating(rating);
+            review.setComment(comment);
+            review.setStatus(1); // 1表示显示
+            review.setCreateTime(new Date());
+            
+            // 保存评价
+            int result = reviewService.addReview(review);
+            
+            if (result == 1) {
+                JOptionPane.showMessageDialog(reviewDialog, "评价发表成功！", "成功", JOptionPane.INFORMATION_MESSAGE);
+                reviewDialog.dispose();
+                loadData(); // 重新加载评价列表
+            } else if (result == -1) {
+                JOptionPane.showMessageDialog(reviewDialog, "该订单已经评价过了", "提示", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(reviewDialog, "评价发表失败", "错误", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        reviewPanel.add(submitBtn, gbc);
+        
+        reviewDialog.add(reviewPanel);
+        reviewDialog.setVisible(true);
+    }
+    
+    private void deleteReview() {
+        int row = reviewTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "请先选择要删除的评价", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        int reviewId = (int) tableModel.getValueAt(row, 0);
+        
+        int confirm = JOptionPane.showConfirmDialog(this, "确定要删除这条评价吗？", "确认删除", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            boolean success = reviewService.deleteReview(reviewId);
+            if (success) {
+                JOptionPane.showMessageDialog(this, "评价删除成功！", "成功", JOptionPane.INFORMATION_MESSAGE);
+                loadData(); // 重新加载评价列表
+            } else {
+                JOptionPane.showMessageDialog(this, "评价删除失败", "错误", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
     
     // 分页相关方法

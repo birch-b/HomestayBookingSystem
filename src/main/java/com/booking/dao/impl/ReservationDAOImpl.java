@@ -546,84 +546,82 @@ public class ReservationDAOImpl implements ReservationDAO {
 
     // ==================== 分页+复合查询 ====================
 
-    @Override
-    public List<Reservation> searchReservations(String keyword, String status,
-                                                Date start, Date end,
-                                                int pageNum, int pageSize) {
-        StringBuilder sql = new StringBuilder();
-        sql.append("SELECT r.*, rm.room_number, h.name as homestay_name, u.username as guest_username ");
-        sql.append("FROM reservations r ");
-        sql.append("JOIN rooms rm ON r.room_id = rm.room_id ");
-        sql.append("JOIN homestays h ON rm.homestay_id = h.homestay_id ");
-        sql.append("JOIN users u ON r.guest_id = u.user_id ");
-        sql.append("WHERE 1=1 ");
+   @Override
+public List<Reservation> searchReservations(String keyword, String status,
+                                            Date start, Date end,
+                                            int pageNum, int pageSize) {
 
-        List<Object> params = new ArrayList<>();
+    StringBuilder sql = new StringBuilder();
+    sql.append("SELECT r.*, rm.room_number, h.name as homestay_name, u.username as guest_username ");
+    sql.append("FROM reservations r ");
+    sql.append("JOIN rooms rm ON r.room_id = rm.room_id ");
+    sql.append("JOIN homestays h ON rm.homestay_id = h.homestay_id ");
+    sql.append("JOIN users u ON r.guest_id = u.user_id ");
+    sql.append("WHERE 1=1 ");
 
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            sql.append("AND (r.reservation_no LIKE ? OR r.guest_name LIKE ? OR r.guest_phone LIKE ?) ");
-            String pattern = "%" + keyword + "%";
-            params.add(pattern);
-            params.add(pattern);
-            params.add(pattern);
-        }
+    List<Object> params = new ArrayList<>();
 
-        if (status != null && !status.trim().isEmpty()) {
-            sql.append("AND r.status = ? ");
-            params.add(status);
-        }
-
-        if (start != null) {
-            sql.append("AND r.check_in_date >= ? ");
-            params.add(new java.sql.Date(start.getTime()));
-        }
-        if (end != null) {
-            sql.append("AND r.check_out_date <= ? ");
-            params.add(new java.sql.Date(end.getTime()));
-        }
-
-        sql.append("ORDER BY r.reservation_id ASC LIMIT ?, ?");
-
-        params.add((pageNum - 1) * pageSize);
-        params.add(pageSize);
-
-        List<Reservation> list = new ArrayList<>();
-        Connection conn;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-
-        try {
-            conn = DBUtil.getConnection();
-            pstmt = conn.prepareStatement(sql.toString());
-
-            for (int i = 0; i < params.size(); i++) {
-                Object param = params.get(i);
-                if (param instanceof String) {
-                    pstmt.setString(i + 1, (String) param);
-                } else if (param instanceof Integer) {
-                    pstmt.setInt(i + 1, (Integer) param);
-                } else if (param instanceof java.sql.Date) {
-                    pstmt.setDate(i + 1, (java.sql.Date) param);
-                }
-            }
-
-            rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                list.add(extractReservationFromResultSet(rs));
-            }
-            return list;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return list;
-        } finally {
-            DBUtil.closeResultSet(rs);
-            if (pstmt != null) {
-                DBUtil.closeStatement(pstmt);
-            }
-        }
+    // ✅🔥 核心修复：如果keyword是纯数字 → 当作用户ID
+    if (keyword != null && keyword.matches("\\d+")) {
+        sql.append("AND r.guest_id = ? ");
+        params.add(Integer.parseInt(keyword));
+    } 
+    // 普通搜索
+    else if (keyword != null && !keyword.trim().isEmpty()) {
+        sql.append("AND (r.reservation_no LIKE ? OR r.guest_name LIKE ? OR r.guest_phone LIKE ?) ");
+        String pattern = "%" + keyword + "%";
+        params.add(pattern);
+        params.add(pattern);
+        params.add(pattern);
     }
 
+    if (status != null && !status.trim().isEmpty()) {
+        sql.append("AND r.status = ? ");
+        params.add(status);
+    }
+
+    if (start != null) {
+        sql.append("AND r.check_in_date >= ? ");
+        params.add(new java.sql.Date(start.getTime()));
+    }
+
+    if (end != null) {
+        sql.append("AND r.check_out_date <= ? ");
+        params.add(new java.sql.Date(end.getTime()));
+    }
+
+    sql.append("ORDER BY r.reservation_id ASC LIMIT ?, ?");
+    params.add((pageNum - 1) * pageSize);
+    params.add(pageSize);
+
+    List<Reservation> list = new ArrayList<>();
+
+    try (Connection conn = DBUtil.getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql.toString())) {
+
+        for (int i = 0; i < params.size(); i++) {
+            Object param = params.get(i);
+            if (param instanceof String) {
+                pstmt.setString(i + 1, (String) param);
+            } else if (param instanceof Integer) {
+                pstmt.setInt(i + 1, (Integer) param);
+            } else if (param instanceof java.sql.Date) {
+                pstmt.setDate(i + 1, (java.sql.Date) param);
+            }
+        }
+
+        ResultSet rs = pstmt.executeQuery();
+
+        while (rs.next()) {
+            list.add(extractReservationFromResultSet(rs));
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+
+    return list;
+}
     @Override
     public long countSearch(String keyword, String status, Date start, Date end) {
         StringBuilder sql = new StringBuilder();

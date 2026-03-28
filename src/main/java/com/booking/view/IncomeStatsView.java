@@ -259,8 +259,8 @@ public class IncomeStatsView extends JFrame {
 
         // 查询所有 COMPLETED 状态的订单
         List<Reservation> allCompletedReservations = reservationService.searchReservations(
-                null, "COMPLETED", null, null, 1, Integer.MAX_VALUE);
-
+                3, null, "COMPLETED", null, null, 1, Integer.MAX_VALUE);
+        
         if (isSpecificMonth) {
             // 按月查询，按天分组显示
             displayDailyData(allCompletedReservations, startDate, endDate, displayYear, 

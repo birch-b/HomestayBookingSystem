@@ -11,10 +11,16 @@ import java.awt.*;
  */
 public class HostView extends MainView {
 
-    private int hostHomestayId = 1; // TODO: 从数据库获取民宿主拥有的民宿ID
+    private int hostHomestayId = -1; // 初始化为-1，表示未设置
 
     public HostView(User user) {
         super(user, "民宿主工作台");
+        // 获取民宿主的民宿ID
+        com.booking.service.HomestayService homestayService = new com.booking.service.impl.HomestayServiceImpl();
+        java.util.List<com.booking.model.Homestay> homestays = homestayService.getHomestaysByHostId(user.getUserId());
+        if (homestays != null && !homestays.isEmpty()) {
+            hostHomestayId = homestays.get(0).getHomestayId();
+        }
     }
 
     @Override
@@ -134,7 +140,12 @@ public class HostView extends MainView {
     }
 
     private void openOrderList() {
-        new OrderListView(currentUser, "HOST", hostHomestayId).setVisible(true);
+        if (hostHomestayId == -1) {
+            JOptionPane.showMessageDialog(this, "请先创建民宿", "提示", JOptionPane.WARNING_MESSAGE);
+            openMyHomestay();
+        } else {
+            new OrderListView(currentUser, "HOST", hostHomestayId).setVisible(true);
+        }
     }
 
     private void openTodayOrder() {

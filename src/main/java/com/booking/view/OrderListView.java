@@ -2,19 +2,14 @@ package com.booking.view;
 
 import com.booking.model.Reservation;
 import com.booking.model.User;
-import com.booking.model.Homestay;
 import com.booking.service.ReservationService;
-import com.booking.service.HomestayService;
 import com.booking.service.impl.ReservationServiceImpl;
-import com.booking.service.impl.HomestayServiceImpl;
 import com.booking.util.AppColors;
-import java.util.ArrayList;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -25,18 +20,18 @@ public class OrderListView extends JFrame {
     private User currentUser;
     private String userRole; // ADMIN, HOST, GUEST
     private int targetId; // 如果是HOST则是homestayId，如果是GUEST则是userId
+
     private ReservationService reservationService;
-    private HomestayService homestayService;
+
     private JTable orderTable;
     private DefaultTableModel tableModel;
     private JComboBox<String> statusFilter;
-    private JTextField startDateField;
-    private JTextField endDateField;
+    private JTextField searchField;
     private JButton searchButton;
     private JButton refreshButton;
-    private JButton viewDetailButton;
     private JButton backButton;
-    
+    private JLabel statsLabel;
+
     // 分页相关
     private int currentPage = 1;
     private int pageSize = 10;
@@ -48,19 +43,18 @@ public class OrderListView extends JFrame {
     private JButton lastPageButton;
     private JTextField pageInput;
     private JLabel pageInfoLabel;
-    
+
     // 保存当前搜索条件
     private String currentSearchStatus = null;
-    private Date currentSearchStartDate = null;
-    private Date currentSearchEndDate = null;
-    private boolean isSearchMode = false; // 是否处于搜索模式
+    private String currentSearchKeyword = null;
+    private boolean isSearchMode = false;
 
     public OrderListView(User user, String role, int id) {
         this.currentUser = user;
         this.userRole = role;
         this.targetId = id;
         this.reservationService = new ReservationServiceImpl();
-        this.homestayService = new HomestayServiceImpl();
+
         initUI();
         loadData();
     }
@@ -87,34 +81,35 @@ public class OrderListView extends JFrame {
         titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 20));
         titleLabel.setForeground(Color.BLACK);
 
-        // 筛选面板 - 每个字段后面紧跟对应的输入框
+        // 筛选面板
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         filterPanel.setBackground(AppColors.LIGHT_PURPLE);
 
-        // 状态: 标签 + 下拉框
-        filterPanel.add(new JLabel("状态:"));
+        JLabel statusLabel = new JLabel("状态:");
+        statusLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+        statusLabel.setForeground(Color.BLACK);
+        filterPanel.add(statusLabel);
+
         String[] statuses = {"全部", "待支付", "已支付", "已确认", "已入住", "已完成", "已取消"};
         statusFilter = new JComboBox<>(statuses);
         statusFilter.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+        statusFilter.setForeground(Color.BLACK);
         statusFilter.setBackground(Color.WHITE);
         statusFilter.setPreferredSize(new Dimension(80, 22));
         filterPanel.add(statusFilter);
 
-        // 开始日期: 标签 + 输入框
-        filterPanel.add(new JLabel("开始日期:"));
-        startDateField = new JTextField(8);
-        startDateField.setFont(new Font("微软雅黑", Font.PLAIN, 12));
-        startDateField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
-        startDateField.setPreferredSize(new Dimension(100, 22));
-        filterPanel.add(startDateField);
+        // 添加搜索框
+        JLabel keywordLabel = new JLabel("关键词:");
+        keywordLabel.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+        keywordLabel.setForeground(Color.BLACK);
+        filterPanel.add(keywordLabel);
 
-        // 结束日期: 标签 + 输入框
-        filterPanel.add(new JLabel("结束日期:"));
-        endDateField = new JTextField(8);
-        endDateField.setFont(new Font("微软雅黑", Font.PLAIN, 12));
-        endDateField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
-        endDateField.setPreferredSize(new Dimension(100, 22));
-        filterPanel.add(endDateField);
+        searchField = new JTextField(10);
+        searchField.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+        searchField.setForeground(Color.BLACK);
+        searchField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
+        searchField.setPreferredSize(new Dimension(100, 22));
+        filterPanel.add(searchField);
 
         searchButton = new JButton("搜索");
         refreshButton = new JButton("刷新");
@@ -129,13 +124,8 @@ public class OrderListView extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 5));
         buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
 
-        viewDetailButton = new JButton("详情");
         backButton = new JButton("返回");
-
-        styleButton(viewDetailButton);
         styleButton(backButton);
-
-        buttonPanel.add(viewDetailButton);
         buttonPanel.add(backButton);
 
         // 合并顶部面板
@@ -155,24 +145,11 @@ public class OrderListView extends JFrame {
 
         orderTable = new JTable(tableModel);
         orderTable.setFont(new Font("微软雅黑", Font.PLAIN, 13));
-        orderTable.setRowHeight(25);
+        orderTable.setRowHeight(30);
         orderTable.getTableHeader().setFont(new Font("微软雅黑", Font.BOLD, 13));
         orderTable.getTableHeader().setBackground(AppColors.PRIMARY_PURPLE);
         orderTable.getTableHeader().setForeground(Color.BLACK);
         orderTable.setSelectionBackground(AppColors.HOVER_PURPLE);
-
-        // 设置列宽
-        orderTable.getColumnModel().getColumn(0).setPreferredWidth(60);
-        orderTable.getColumnModel().getColumn(1).setPreferredWidth(150);
-        orderTable.getColumnModel().getColumn(2).setPreferredWidth(120);
-        orderTable.getColumnModel().getColumn(3).setPreferredWidth(80);
-        orderTable.getColumnModel().getColumn(4).setPreferredWidth(80);
-        orderTable.getColumnModel().getColumn(5).setPreferredWidth(90);
-        orderTable.getColumnModel().getColumn(6).setPreferredWidth(90);
-        orderTable.getColumnModel().getColumn(7).setPreferredWidth(50);
-        orderTable.getColumnModel().getColumn(8).setPreferredWidth(80);
-        orderTable.getColumnModel().getColumn(9).setPreferredWidth(80);
-        orderTable.getColumnModel().getColumn(10).setPreferredWidth(130);
 
         JScrollPane scrollPane = new JScrollPane(orderTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(AppColors.PRIMARY_PURPLE));
@@ -210,9 +187,9 @@ public class OrderListView extends JFrame {
         // 底部统计
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         bottomPanel.setBackground(AppColors.LIGHT_PURPLE);
-        JLabel statsLabel = new JLabel("总订单数: 0 | 总金额: 0.00元");
+        statsLabel = new JLabel("总订单数: 0 | 总金额: 0.00元");
         statsLabel.setFont(new Font("微软雅黑", Font.PLAIN, 13));
-        statsLabel.setForeground(Color.BLACK);
+        statsLabel.setForeground(AppColors.DARK_PURPLE);
         bottomPanel.add(statsLabel);
 
         // 组装界面
@@ -220,12 +197,12 @@ public class OrderListView extends JFrame {
         northPanel.setBackground(AppColors.LIGHT_PURPLE);
         northPanel.add(titleLabel, BorderLayout.NORTH);
         northPanel.add(topPanel, BorderLayout.SOUTH);
-        
+
         JPanel southPanel = new JPanel(new BorderLayout());
         southPanel.setBackground(AppColors.LIGHT_PURPLE);
         southPanel.add(paginationPanel, BorderLayout.NORTH);
         southPanel.add(bottomPanel, BorderLayout.SOUTH);
-        
+
         mainPanel.add(northPanel, BorderLayout.NORTH);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         mainPanel.add(southPanel, BorderLayout.SOUTH);
@@ -235,9 +212,8 @@ public class OrderListView extends JFrame {
         // 事件监听
         searchButton.addActionListener(e -> searchOrders());
         refreshButton.addActionListener(e -> refreshOrders());
-        viewDetailButton.addActionListener(e -> viewOrderDetail());
         backButton.addActionListener(e -> dispose());
-        
+
         // 分页事件
         firstPageButton.addActionListener(e -> goToFirstPage());
         prevPageButton.addActionListener(e -> goToPrevPage());
@@ -245,7 +221,7 @@ public class OrderListView extends JFrame {
         lastPageButton.addActionListener(e -> goToLastPage());
         pageInput.addActionListener(e -> goToPage());
     }
-    
+
     private void styleButton(JButton button) {
         button.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         button.setBackground(AppColors.BUTTON_PURPLE);
@@ -275,332 +251,185 @@ public class OrderListView extends JFrame {
             default: return status;
         }
     }
-    
-    private String getStatusCode(String statusName) {
-        switch (statusName) {
-            case "待支付": return "PENDING";
-            case "已支付": return "PAID";
-            case "已确认": return "CONFIRMED";
-            case "已入住": return "CHECKED_IN";
-            case "已完成": return "COMPLETED";
-            case "已取消": return "CANCELLED";
-            default: return null;
-        }
-    }
 
     private void loadData() {
         tableModel.setRowCount(0);
         List<Reservation> orderList = null;
-        
-        // 根据是否处于搜索模式决定使用搜索条件还是普通加载
+        List<Reservation> allOrders = null;
+
         if (isSearchMode) {
-            // 使用搜索条件加载数据（分页）
-            orderList = reservationService.searchReservations(
-                null, currentSearchStatus, currentSearchStartDate, currentSearchEndDate, 
-                currentPage, pageSize);
-            
-            // 获取总数
-            List<Reservation> allResults = reservationService.searchReservations(
-                null, currentSearchStatus, currentSearchStartDate, currentSearchEndDate, 
-                1, Integer.MAX_VALUE);
-            totalCount = allResults != null ? allResults.size() : 0;
+            // 搜索模式
+            if ("HOST".equals(userRole)) {
+                // 民宿主搜索自己民宿的订单
+                orderList = reservationService.getHomestayReservations(targetId, currentPage, pageSize);
+                allOrders = reservationService.getHomestayReservations(targetId, 1, Integer.MAX_VALUE);
+            } else {
+                // 管理员和游客的搜索
+                orderList = reservationService.searchReservations(
+                        "GUEST".equals(userRole) ? targetId : null,
+                        currentSearchKeyword,
+                        currentSearchStatus,
+                        null,
+                        null,
+                        currentPage,
+                        pageSize
+                );
+                allOrders = reservationService.searchReservations(
+                        "GUEST".equals(userRole) ? targetId : null,
+                        currentSearchKeyword,
+                        currentSearchStatus,
+                        null,
+                        null,
+                        1,
+                        Integer.MAX_VALUE
+                );
+            }
         } else {
-            // 普通模式，根据角色加载数据
+            // 普通模式
             switch (userRole) {
                 case "ADMIN":
-                    orderList = reservationService.searchReservations(null, null, null, null, currentPage, pageSize);
-                    // 获取总数
-                    List<Reservation> allOrders = reservationService.searchReservations(null, null, null, null, 1, Integer.MAX_VALUE);
-                    totalCount = allOrders != null ? allOrders.size() : 0;
-                    break;
-                case "HOST":
-                    // 获取民宿主的所有民宿
-                    List<Homestay> homestays = homestayService.getHomestaysByHostId(currentUser.getUserId());
-                    if (homestays != null && !homestays.isEmpty()) {
-                        // 收集所有民宿的订单
-                        List<Reservation> allHostOrders = new ArrayList<>();
-                        for (Homestay homestay : homestays) {
-                            List<Reservation> homestayOrders = reservationService.getHomestayReservations(homestay.getHomestayId(), 1, Integer.MAX_VALUE);
-                            if (homestayOrders != null && !homestayOrders.isEmpty()) {
-                                allHostOrders.addAll(homestayOrders);
-                            }
-                        }
-                        // 计算总数
-                        totalCount = allHostOrders.size();
-                        // 分页
-                        int startIndex = (currentPage - 1) * pageSize;
-                        int endIndex = Math.min(startIndex + pageSize, allHostOrders.size());
-                        if (startIndex < allHostOrders.size()) {
-                            orderList = allHostOrders.subList(startIndex, endIndex);
-                        } else {
-                            orderList = new ArrayList<>();
-                        }
-                    } else {
-                        orderList = new ArrayList<>();
-                        totalCount = 0;
-                    }
+                    // 管理员查看所有订单
+                    orderList = reservationService.searchReservations(null, null, null, null, null, currentPage, pageSize);
+                    allOrders = reservationService.searchReservations(null, null, null, null, null, 1, Integer.MAX_VALUE);
                     break;
                 case "GUEST":
+                    // 游客查看自己的订单
                     orderList = reservationService.getUserReservations(targetId, currentPage, pageSize);
-                    // 获取总数
-                    List<Reservation> allGuestOrders = reservationService.getUserReservations(targetId, 1, Integer.MAX_VALUE);
-                    totalCount = allGuestOrders != null ? allGuestOrders.size() : 0;
+                    allOrders = reservationService.getUserReservations(targetId, 1, Integer.MAX_VALUE);
+                    break;
+                case "HOST":
+                    // 民宿主查看自己民宿的订单
+                    orderList = reservationService.getHomestayReservations(targetId, currentPage, pageSize);
+                    allOrders = reservationService.getHomestayReservations(targetId, 1, Integer.MAX_VALUE);
                     break;
             }
         }
-        
-        if (orderList == null || orderList.isEmpty()) {
-            // 没有数据时显示提示
-            if (isSearchMode) {
-                tableModel.addRow(new Object[]{"", "", "", "", "", "", "", "", "", "暂无数据", ""});
-            }
-            updatePaginationInfo();
+
+        if (orderList == null) {
             updateStats();
+            updatePaginationInfo();
             return;
         }
-        
+
+        totalCount = allOrders != null ? allOrders.size() : 0;
+
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-        
+
         for (Reservation r : orderList) {
-            String homestayName = "民宿" + r.getRoomId();
-            String roomNumber = "房间" + r.getRoomId();
-            
             Object[] row = {
-                r.getReservationId(),
-                r.getReservationNo(),
-                homestayName,
-                roomNumber,
-                r.getGuestName(),
-                sdf.format(r.getCheckInDate()),
-                sdf.format(r.getCheckOutDate()),
-                r.getGuestsCount(),
-                r.getTotalPrice(),
-                getStatusName(r.getStatus()),
-                r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : ""
+                    r.getReservationId(),
+                    r.getReservationNo(),
+                    "民宿" + r.getRoomId(), // 需要改进：获取真实民宿名
+                    "房间" + r.getRoomId(), // 需要改进：获取真实房间号
+                    r.getGuestName(),
+                    sdf.format(r.getCheckInDate()),
+                    sdf.format(r.getCheckOutDate()),
+                    r.getGuestsCount(),
+                    r.getTotalPrice(),
+                    getStatusName(r.getStatus()),
+                    r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : ""
             };
             tableModel.addRow(row);
         }
-        
+
         updateStats();
         updatePaginationInfo();
     }
 
     private void updateStats() {
-        // 计算所有订单的总金额，而不仅仅是当前页面的
+        int total = tableModel.getRowCount();
         double totalAmount = 0;
-        List<Reservation> allOrders = null;
-        
-        if (isSearchMode) {
-            // 搜索模式下获取所有符合条件的订单
-            allOrders = reservationService.searchReservations(
-                null, currentSearchStatus, currentSearchStartDate, currentSearchEndDate, 
-                1, Integer.MAX_VALUE);
-        } else {
-            // 普通模式下根据角色获取所有订单
-            switch (userRole) {
-                case "ADMIN":
-                    allOrders = reservationService.searchReservations(null, null, null, null, 1, Integer.MAX_VALUE);
-                    break;
-                case "HOST":
-                    // 获取民宿主的所有民宿
-                    List<Homestay> homestays = homestayService.getHomestaysByHostId(currentUser.getUserId());
-                    if (homestays != null && !homestays.isEmpty()) {
-                        // 收集所有民宿的订单
-                        allOrders = new ArrayList<>();
-                        for (Homestay homestay : homestays) {
-                            List<Reservation> homestayOrders = reservationService.getHomestayReservations(homestay.getHomestayId(), 1, Integer.MAX_VALUE);
-                            if (homestayOrders != null && !homestayOrders.isEmpty()) {
-                                allOrders.addAll(homestayOrders);
-                            }
-                        }
-                    }
-                    break;
-                case "GUEST":
-                    allOrders = reservationService.getUserReservations(targetId, 1, Integer.MAX_VALUE);
-                    break;
-            }
-        }
-        
-        if (allOrders != null) {
-            for (Reservation r : allOrders) {
-                totalAmount += r.getTotalPrice();
+
+        for (int i = 0; i < total; i++) {
+            try {
+                Object priceObj = tableModel.getValueAt(i, 8);
+                if (priceObj instanceof Double) {
+                    totalAmount += (Double) priceObj;
+                }
+            } catch (Exception e) {
+                // 忽略
             }
         }
 
-        // 更新底部统计
-        Container contentPane = getContentPane();
-        if (contentPane.getComponentCount() > 0) {
-            Component mainComp = contentPane.getComponent(0);
-            if (mainComp instanceof JPanel) {
-                JPanel mainPanel = (JPanel) mainComp;
-                int compCount = mainPanel.getComponentCount();
-                if (compCount > 0) {
-                    Component southComp = mainPanel.getComponent(compCount - 1);
-                    if (southComp instanceof JPanel) {
-                        JPanel southPanel = (JPanel) southComp;
-                        if (southPanel.getComponentCount() > 0) {
-                            Component bottomComp = southPanel.getComponent(1);
-                            if (bottomComp instanceof JPanel) {
-                                JPanel bottomPanel = (JPanel) bottomComp;
-                                if (bottomPanel.getComponentCount() > 0) {
-                                    Component labelComp = bottomPanel.getComponent(0);
-                                    if (labelComp instanceof JLabel) {
-                                        JLabel statsLabel = (JLabel) labelComp;
-                                        statsLabel.setText(String.format("总订单数: %d | 总金额: %.2f元", totalCount, totalAmount));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        statsLabel.setText(String.format("总订单数: %d | 总金额: %.2f元", total, totalAmount));
     }
 
     private void searchOrders() {
-        // 获取搜索条件
         String status = (String) statusFilter.getSelectedItem();
         if ("全部".equals(status)) {
             currentSearchStatus = null;
         } else {
-            currentSearchStatus = getStatusCode(status);
-        }
-        
-        String startDateStr = startDateField.getText().trim();
-        String endDateStr = endDateField.getText().trim();
-        
-        currentSearchStartDate = null;
-        currentSearchEndDate = null;
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-        
-        try {
-            if (!startDateStr.isEmpty()) {
-                currentSearchStartDate = sdf.parse(startDateStr);
+            switch (status) {
+                case "待支付": currentSearchStatus = "PENDING"; break;
+                case "已支付": currentSearchStatus = "PAID"; break;
+                case "已确认": currentSearchStatus = "CONFIRMED"; break;
+                case "已入住": currentSearchStatus = "CHECKED_IN"; break;
+                case "已完成": currentSearchStatus = "COMPLETED"; break;
+                case "已取消": currentSearchStatus = "CANCELLED"; break;
             }
-            if (!endDateStr.isEmpty()) {
-                currentSearchEndDate = sdf.parse(endDateStr);
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "日期格式错误（示例：2024-01-01）", "提示", JOptionPane.WARNING_MESSAGE);
-            return;
         }
-        
-        // 进入搜索模式
+
+        currentSearchKeyword = searchField.getText().trim();
         isSearchMode = true;
-        currentPage = 1; // 重置到第一页
-        
-        // 加载搜索数据
+        currentPage = 1;
+
         loadData();
-        
-        // 如果搜索不到数据，提示用户
-        if (tableModel.getRowCount() == 0 || 
-            (tableModel.getRowCount() == 1 && "暂无数据".equals(tableModel.getValueAt(0, 9)))) {
+
+        if (tableModel.getRowCount() == 0) {
             JOptionPane.showMessageDialog(this, "未找到符合条件的订单", "提示", JOptionPane.INFORMATION_MESSAGE);
         }
     }
-    
+
     private void refreshOrders() {
-        // 清空搜索条件
         statusFilter.setSelectedIndex(0);
-        startDateField.setText("");
-        endDateField.setText("");
-        
-        // 重置搜索状态
-        isSearchMode = false;
+        searchField.setText("");
         currentSearchStatus = null;
-        currentSearchStartDate = null;
-        currentSearchEndDate = null;
+        currentSearchKeyword = null;
+        isSearchMode = false;
         currentPage = 1;
-        
-        // 重新加载数据
+
         loadData();
     }
 
-    private void viewOrderDetail() {
-        int row = orderTable.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "请先选择要查看的订单", "提示", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        
-        // 检查是否是"暂无数据"行
-        Object orderIdObj = tableModel.getValueAt(row, 0);
-        if (orderIdObj == null || "".equals(orderIdObj.toString())) {
-            return;
-        }
-
-        int orderId = (int) orderIdObj;
-        String orderNo = (String) tableModel.getValueAt(row, 1);
-        String homestayName = (String) tableModel.getValueAt(row, 2);
-        String roomNumber = (String) tableModel.getValueAt(row, 3);
-        String guestName = (String) tableModel.getValueAt(row, 4);
-        String checkIn = (String) tableModel.getValueAt(row, 5);
-        String checkOut = (String) tableModel.getValueAt(row, 6);
-        int guests = (int) tableModel.getValueAt(row, 7);
-        double price = (double) tableModel.getValueAt(row, 8);
-        String status = (String) tableModel.getValueAt(row, 9);
-
-        String detail = String.format(
-                "订单详情\n\n" +
-                "订单ID: %d\n" +
-                "订单号: %s\n" +
-                "民宿: %s\n" +
-                "房间: %s\n" +
-                "客人: %s\n" +
-                "入住: %s\n" +
-                "离店: %s\n" +
-                "人数: %d\n" +
-                "总价: %.2f元\n" +
-                "状态: %s",
-                orderId, orderNo, homestayName, roomNumber, guestName,
-                checkIn, checkOut, guests, price, status);
-
-        JOptionPane.showMessageDialog(this, detail, "订单详情", JOptionPane.INFORMATION_MESSAGE);
-    }
-    
     // 分页相关方法
     private void updatePaginationInfo() {
         totalPages = (totalCount + pageSize - 1) / pageSize;
         if (totalPages < 1) totalPages = 1;
-        
+
         pageInfoLabel.setText("第 " + currentPage + " 页 / 共 " + totalPages + " 页");
         pageInput.setText(String.valueOf(currentPage));
-        
+
         // 更新按钮状态
         firstPageButton.setEnabled(currentPage > 1);
         prevPageButton.setEnabled(currentPage > 1);
         nextPageButton.setEnabled(currentPage < totalPages);
         lastPageButton.setEnabled(currentPage < totalPages);
     }
-    
+
     private void goToFirstPage() {
-        if (currentPage > 1) {
-            currentPage = 1;
-            loadData();
-        }
+        currentPage = 1;
+        loadData();
     }
-    
+
     private void goToPrevPage() {
         if (currentPage > 1) {
             currentPage--;
             loadData();
         }
     }
-    
+
     private void goToNextPage() {
         if (currentPage < totalPages) {
             currentPage++;
             loadData();
         }
     }
-    
+
     private void goToLastPage() {
-        if (currentPage < totalPages) {
-            currentPage = totalPages;
-            loadData();
-        }
+        currentPage = totalPages;
+        loadData();
     }
-    
+
     private void goToPage() {
         try {
             int page = Integer.parseInt(pageInput.getText().trim());
@@ -608,9 +437,7 @@ public class OrderListView extends JFrame {
                 currentPage = page;
                 loadData();
             } else {
-                JOptionPane.showMessageDialog(this, 
-                    String.format("页码超出范围（1-%d）", totalPages), 
-                    "提示", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "页码超出范围", "提示", JOptionPane.WARNING_MESSAGE);
             }
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "请输入有效的页码", "提示", JOptionPane.WARNING_MESSAGE);

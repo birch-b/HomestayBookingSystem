@@ -120,7 +120,7 @@ public class TestReservationService {
 
         // ==================== 7. 测试搜索功能 ====================
         System.out.println("\n=== 7. 测试搜索功能 (关键词'张三') ===");
-        List<Reservation> searchResult = service.searchReservations("张三", null, null, null, 1, 5);
+        List<Reservation> searchResult = service.searchReservations(3,"张三", null, null, null, 1, 5);
         System.out.println("找到 " + searchResult.size() + " 个订单");
         for (Reservation r : searchResult) {
             System.out.println("  " + r.getReservationId() + " | " +
