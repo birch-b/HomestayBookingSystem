@@ -78,6 +78,7 @@ public class CheckinRecordServiceImpl implements CheckinRecordService {
         record.setDeposit(deposit);
         record.setRoomKeysGiven(roomKeys);
         record.setRemarks(remarks);
+        record.setActualCheckIn(new Date());  // 设置实际入住时间为当前时间
 
         int result = checkinRecordDAO.insert(record);
 
@@ -165,13 +166,50 @@ public class CheckinRecordServiceImpl implements CheckinRecordService {
 
         return allRecords.subList(start, end);
     }
-    /**
-     * 查询今日入住
-     */
-    @Override
-    public List<CheckinRecord> getTodayCheckIn() {
-        return checkinRecordDAO.selectTodayCheckIn();
+   @Override
+public List<CheckinRecord> getTodayCheckIn() {
+
+    List<CheckinRecord> result = new ArrayList<>();
+
+    // 1. 获取今天所有订单（核心！）
+    List<Reservation> todayReservations = reservationDAO.selectByCheckInDate(new Date());
+
+    for (Reservation reservation : todayReservations) {
+
+        // 2. 查是否已有入住记录
+        CheckinRecord record = checkinRecordDAO.selectByReservationId(reservation.getReservationId());
+
+        if (record == null) {
+            // ===== 未入住（创建临时记录）=====
+            record = new CheckinRecord();
+            record.setReservationId(reservation.getReservationId());
+            record.setReservation(reservation);
+        } else {
+            // ===== 已入住（补充 reservation）=====
+            record.setReservation(reservation);
+        }
+
+        // ===== 统一补全信息（关键！）=====
+
+        // 客人
+        User guest = userDAO.selectById(reservation.getGuestId());
+        record.setGuest(guest);
+
+        // 房间
+        Room room = roomDAO.selectById(reservation.getRoomId());
+        if (room != null) {
+            record.setRoom(room);
+
+            // 民宿
+            Homestay homestay = homestayDAO.selectById(room.getHomestayId());
+            record.setHomestay(homestay);
+        }
+
+        result.add(record);
     }
+
+    return result;
+}
     /**
      * 查询今日退房
      */
@@ -298,5 +336,10 @@ public class CheckinRecordServiceImpl implements CheckinRecordService {
         }
 
         return record;
+    }
+
+    @Override
+    public int deleteRecord(int recordId) {
+        return checkinRecordDAO.deleteById(recordId);
     }
 }

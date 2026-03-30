@@ -58,6 +58,11 @@ public interface ReservationDAO extends BaseDAO<Reservation> {
     List<Reservation> selectByStatus(String status);
 
     /**
+     * 根据入住日期查询
+     */
+    List<Reservation> selectByCheckInDate(Date date);
+
+    /**
      * 更新订单状态
      */
     int updateStatus(int reservationId, String status);
@@ -91,4 +96,6 @@ public interface ReservationDAO extends BaseDAO<Reservation> {
      * 统计复合查询结果总数
      */
     long countSearch(String keyword, String status, Date start, Date end);
+    // 统计今日入住订单数
+    int countTodayOrders(int homestayId);
 }

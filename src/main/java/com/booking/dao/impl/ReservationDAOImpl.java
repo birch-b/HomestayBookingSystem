@@ -513,6 +513,35 @@ public class ReservationDAOImpl implements ReservationDAO {
     }
 
     @Override
+    public List<Reservation> selectByCheckInDate(Date date) {
+        String sql = "SELECT * FROM reservations WHERE DATE(check_in_date) = DATE(?) AND status IN ('PAID', 'CONFIRMED', 'CHECKED_IN') ORDER BY reservation_id ASC";
+        List<Reservation> list = new ArrayList<>();
+        Connection conn;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DBUtil.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setDate(1, new java.sql.Date(date.getTime()));
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                list.add(extractReservationFromResultSet(rs));
+            }
+            return list;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return list;
+        } finally {
+            DBUtil.closeResultSet(rs);
+            if (pstmt != null) {
+                DBUtil.closeStatement(pstmt);
+            }
+        }
+    }
+
+    @Override
     public int updateStatus(int reservationId, String status) {
         String sql = "UPDATE reservations SET status = ? WHERE reservation_id = ?";
         Connection conn;
@@ -714,5 +743,33 @@ public List<Reservation> searchReservations(String keyword, String status,
         reservation.setCreateTime(rs.getTimestamp("create_time"));
         reservation.setUpdateTime(rs.getTimestamp("update_time"));
         return reservation;
+    }
+
+  @Override
+    public int countTodayOrders(int homestayId) {
+        String sql = """
+            SELECT COUNT(*)
+            FROM reservations r
+            JOIN rooms rm ON r.room_id = rm.room_id
+            WHERE rm.homestay_id = ?
+            AND DATE(r.check_in_date) = CURDATE()
+            AND r.status IN ('PAID', 'CONFIRMED', 'CHECKED_IN')
+        """;
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, homestayId);
+
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return 0;
     }
 }

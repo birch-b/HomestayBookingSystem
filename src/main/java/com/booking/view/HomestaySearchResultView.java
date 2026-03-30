@@ -15,11 +15,17 @@ public class HomestaySearchResultView extends JFrame {
 
     private User currentUser;
     private String searchCity;
+    private String checkIn;
+    private String checkOut;
+    private String people;
     private List<Homestay> homestays;
 
-    public HomestaySearchResultView(User user, String city, List<Homestay> homestays) {
+    public HomestaySearchResultView(User user, String city, String checkIn, String checkOut, String people, List<Homestay> homestays) {
         this.currentUser = user;
         this.searchCity = city;
+        this.checkIn = checkIn;
+        this.checkOut = checkOut;
+        this.people = people;
         this.homestays = homestays;
 
         initUI();
@@ -121,6 +127,6 @@ public class HomestaySearchResultView extends JFrame {
 
     private void openHomestayDetail(int id) {
         // 使用统一的民宿详情对话框
-        HomestayDetailDialog.show(this, currentUser, id);
+        HomestayDetailDialog.show(this, currentUser, id, checkIn, checkOut, people);
     }
 }

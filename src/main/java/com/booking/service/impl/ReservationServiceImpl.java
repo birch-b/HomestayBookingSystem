@@ -202,6 +202,7 @@ public class ReservationServiceImpl implements ReservationService{
             record.setReservationId(reservationId);
             record.setDeposit(deposit);
             record.setRoomKeysGiven(1);
+            record.setActualCheckIn(new Date());  // 设置实际入住时间为当前时间
 
             CheckinRecordDAO checkinDAO = new CheckinRecordDAOImpl();
             checkinDAO.insert(record);
@@ -436,6 +437,17 @@ public List<Reservation> searchReservations(
             return basePrice;
         
     }
+
+    /**
+     * 更新订单状态
+     * @param reservationId 订单ID
+     * @param status 新状态
+     * @return 是否成功
+     */
+    public boolean updateReservationStatus(int reservationId, String status) {
+        int result = reservationDAO.updateStatus(reservationId, status);
+        return result > 0;
+    }
     // ==================== 工具方法 ====================
 //获取订单号
     private String generateReservationNo() {
@@ -446,4 +458,8 @@ public List<Reservation> searchReservations(
     private String generatePaymentNo() {
         return "PAY" + System.currentTimeMillis();
     }
+    @Override
+public int countTodayOrders(int homestayId) {
+    return reservationDAO.countTodayOrders(homestayId);
+}
 }

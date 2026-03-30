@@ -5,19 +5,31 @@ import com.booking.util.AppColors;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 
 /**
- * 民宿主界面
+ * 民宿主界面（优化版：支持实时刷新）
  */
 public class HostView extends MainView {
 
-    private int hostHomestayId = -1; // 初始化为-1，表示未设置
+    private int hostHomestayId = -1;
+
+    // ⭐ 关键：做成成员变量，方便动态更新
+    private JLabel orderValue;
+    private JLabel checkinValue;
 
     public HostView(User user) {
         super(user, "民宿主工作台");
-        // 获取民宿主的民宿ID
-        com.booking.service.HomestayService homestayService = new com.booking.service.impl.HomestayServiceImpl();
-        java.util.List<com.booking.model.Homestay> homestays = homestayService.getHomestaysByHostId(user.getUserId());
+
+        // 获取民宿ID
+        com.booking.service.HomestayService homestayService =
+                new com.booking.service.impl.HomestayServiceImpl();
+
+        List<com.booking.model.Homestay> homestays =
+                homestayService.getHomestaysByHostId(user.getUserId());
+
         if (homestays != null && !homestays.isEmpty()) {
             hostHomestayId = homestays.get(0).getHomestayId();
         }
@@ -25,30 +37,31 @@ public class HostView extends MainView {
 
     @Override
     protected void initMenu() {
-        // 移除导航栏，参照管理员界面
+        // 无菜单
     }
 
     @Override
     protected void initContent() {
+
         contentPanel.setBackground(AppColors.LIGHT_PURPLE);
 
         JLabel welcomeLabel = new JLabel("欢迎民宿主 " + currentUser.getRealName(), JLabel.CENTER);
         welcomeLabel.setFont(new Font("微软雅黑", Font.BOLD, 24));
         welcomeLabel.setForeground(AppColors.PRIMARY_PURPLE);
 
-        // 快捷操作面板
+        // ================= 快捷按钮 =================
         JPanel quickPanel = new JPanel(new GridLayout(2, 3, 20, 20));
         quickPanel.setBackground(AppColors.LIGHT_PURPLE);
         quickPanel.setBorder(BorderFactory.createEmptyBorder(30, 50, 30, 50));
 
         String[] buttons = {"我的民宿", "订单管理", "评价回复", "收入统计", "今日入住"};
+
         for (String btnText : buttons) {
             JButton btn = new JButton(btnText);
             btn.setFont(new Font("微软雅黑", Font.BOLD, 16));
             btn.setBackground(AppColors.BUTTON_PURPLE);
             btn.setForeground(AppColors.DARK_PURPLE);
             btn.setFocusPainted(false);
-            btn.setPreferredSize(new Dimension(150, 80));
 
             btn.addActionListener(e -> {
                 switch (btnText) {
@@ -63,7 +76,7 @@ public class HostView extends MainView {
             quickPanel.add(btn);
         }
 
-        // 今日概览
+        // ================= 今日概览 =================
         JPanel infoPanel = new JPanel(new GridLayout(2, 2, 15, 15));
         infoPanel.setBackground(AppColors.WHITE);
         infoPanel.setBorder(BorderFactory.createTitledBorder(
@@ -76,84 +89,100 @@ public class HostView extends MainView {
         ));
 
         JLabel orderLabel = new JLabel("今日订单:");
-        orderLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        orderLabel.setForeground(AppColors.DARK_PURPLE);
-        infoPanel.add(orderLabel);
-        
-        JLabel orderValue = new JLabel("0");
-        orderValue.setFont(new Font("微软雅黑", Font.BOLD, 14));
-        orderValue.setForeground(AppColors.PRIMARY_PURPLE);
-        infoPanel.add(orderValue);
-        
         JLabel checkinLabel = new JLabel("今日入住:");
+
+        orderLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
         checkinLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+
+        orderLabel.setForeground(AppColors.DARK_PURPLE);
         checkinLabel.setForeground(AppColors.DARK_PURPLE);
-        infoPanel.add(checkinLabel);
-        
-        JLabel checkinValue = new JLabel("0");
-        checkinValue.setFont(new Font("微软雅黑", Font.BOLD, 14));
+
+        // ⭐ 初始化为0
+        orderValue = new JLabel("0");
+        checkinValue = new JLabel("0");
+
+        orderValue.setFont(new Font("微软雅黑", Font.BOLD, 16));
+        checkinValue.setFont(new Font("微软雅黑", Font.BOLD, 16));
+
+        orderValue.setForeground(AppColors.PRIMARY_PURPLE);
         checkinValue.setForeground(AppColors.PRIMARY_PURPLE);
+
+        infoPanel.add(orderLabel);
+        infoPanel.add(orderValue);
+        infoPanel.add(checkinLabel);
         infoPanel.add(checkinValue);
 
+        // ================= 主布局 =================
         JPanel mainPanel = new JPanel(new BorderLayout(20, 20));
         mainPanel.setBackground(AppColors.LIGHT_PURPLE);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
+
         mainPanel.add(welcomeLabel, BorderLayout.NORTH);
         mainPanel.add(quickPanel, BorderLayout.CENTER);
         mainPanel.add(infoPanel, BorderLayout.SOUTH);
 
         contentPanel.add(mainPanel);
+
+        // ⭐ 初始化加载数据
+        refreshData();
+
+        // ⭐ 定时刷新（每5秒）
+        startAutoRefresh();
     }
 
-    private void styleMenuItem(JMenuItem item) {
-        item.setFont(new Font("微软雅黑", Font.PLAIN, 13));
-        item.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
-        item.setOpaque(true);
-        item.setBackground(AppColors.PRIMARY_PURPLE);
-        item.setForeground(AppColors.WHITE);
-
-        item.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                item.setBackground(AppColors.HOVER_PURPLE);
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                item.setBackground(AppColors.PRIMARY_PURPLE);
-            }
-        });
+    // ================= 核心：刷新数据 =================
+    private void refreshData() {
+        refreshTodayOrderCount();
+        refreshTodayCheckInCount();
     }
 
-    // ========== 界面跳转方法 ==========
+   // ================= 今日订单（SQL统计版） =================
+private void refreshTodayOrderCount() {
+
+    int count = 0;
+
+    if (hostHomestayId != -1) {
+        com.booking.service.ReservationService service =
+                new com.booking.service.impl.ReservationServiceImpl();
+
+        // ⭐ 直接数据库统计
+        count = service.countTodayOrders(hostHomestayId);
+    }
+
+    orderValue.setText(String.valueOf(count));
+}
+    // ================= 今日入住 =================
+    private void refreshTodayCheckInCount() {
+        int count = 0;
+
+        com.booking.service.CheckinRecordService service =
+                new com.booking.service.impl.CheckinRecordServiceImpl();
+
+        List<com.booking.model.CheckinRecord> list = service.getTodayCheckIn();
+
+        if (list != null) {
+            count = list.size();
+        }
+
+        checkinValue.setText(String.valueOf(count));
+    }
+
+    // ================= 自动刷新 =================
+    private void startAutoRefresh() {
+        new javax.swing.Timer(5000, e -> refreshData()).start();
+    }
+
+    // ================= 跳转 =================
     private void openMyHomestay() {
         new HomestayManageView(currentUser).setVisible(true);
     }
 
-    private void openEditHomestay() {
-        JOptionPane.showMessageDialog(this, "编辑民宿信息", "提示", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void openRoomManage() {
-        new RoomManageView(currentUser, hostHomestayId, "我的民宿").setVisible(true);
-    }
-
-    private void openAddRoom() {
-        JOptionPane.showMessageDialog(this, "添加房间", "提示", JOptionPane.INFORMATION_MESSAGE);
-    }
-
     private void openOrderList() {
         if (hostHomestayId == -1) {
-            JOptionPane.showMessageDialog(this, "请先创建民宿", "提示", JOptionPane.WARNING_MESSAGE);
-            openMyHomestay();
+            JOptionPane.showMessageDialog(this, "请先创建民宿");
         } else {
             new OrderListView(currentUser, "HOST", hostHomestayId).setVisible(true);
         }
-    }
-
-    private void openTodayOrder() {
-        JOptionPane.showMessageDialog(this, "今日订单", "提示", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void openReviewManage() {
-        new ReviewView(currentUser, "HOST", hostHomestayId).setVisible(true);
     }
 
     private void openPendingReply() {
@@ -161,10 +190,6 @@ public class HostView extends MainView {
     }
 
     private void openMonthIncome() {
-        new IncomeStatsView(currentUser).setVisible(true);
-    }
-
-    private void openYearIncome() {
         new IncomeStatsView(currentUser).setVisible(true);
     }
 

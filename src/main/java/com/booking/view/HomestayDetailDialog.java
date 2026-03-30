@@ -21,6 +21,19 @@ public class HomestayDetailDialog {
      * @param homestayId 民宿ID
      */
     public static void show(JFrame parent, User currentUser, int homestayId) {
+        show(parent, currentUser, homestayId, null, null, null);
+    }
+
+    /**
+     * 显示民宿详情对话框（带日期范围）
+     * @param parent 父窗口
+     * @param currentUser 当前用户
+     * @param homestayId 民宿ID
+     * @param checkIn 入住日期
+     * @param checkOut 离店日期
+     * @param people 人数
+     */
+    public static void show(JFrame parent, User currentUser, int homestayId, String checkIn, String checkOut, String people) {
         // 获取民宿详情
         HomestayService homestayService = new HomestayServiceImpl();
         Homestay homestay = homestayService.getHomestayById(homestayId);
@@ -160,7 +173,11 @@ public class HomestayDetailDialog {
         bookBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         bookBtn.addActionListener(e -> {
             dialog.dispose();
-            new ReservationView(currentUser, homestay.getHomestayId()).setVisible(true);
+            if (checkIn != null && checkOut != null && people != null) {
+                new ReservationView(currentUser, homestay.getHomestayId(), checkIn, checkOut, people).setVisible(true);
+            } else {
+                new ReservationView(currentUser, homestay.getHomestayId()).setVisible(true);
+            }
         });
 
         JButton closeBtn = new JButton("关闭");

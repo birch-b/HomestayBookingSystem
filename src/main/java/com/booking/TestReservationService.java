@@ -129,6 +129,27 @@ public class TestReservationService {
                     r.getStatus());
         }
 
+        // ==================== 8. 测试查询订单ID=32的详细信息 ====================
+        System.out.println("\n=== 8. 测试查询订单ID=32的详细信息 ===");
+        Reservation order32 = service.getReservationDetail(32);
+        if (order32 != null) {
+            System.out.println("订单ID: " + order32.getReservationId());
+            System.out.println("订单号: " + order32.getReservationNo());
+            System.out.println("状态: " + order32.getStatus());
+            System.out.println("创建时间: " + order32.getCreateTime());
+            System.out.println("入住时间: " + order32.getCheckInDate());
+            System.out.println("退房时间: " + order32.getCheckOutDate());
+            System.out.println("客人ID: " + order32.getGuestId());
+            System.out.println("房间ID: " + order32.getRoomId());
+        } else {
+            System.out.println("订单ID=32不存在");
+        }
+
+        // ==================== 9. 测试获取今日订单 ====================
+        System.out.println("\n=== 9. 测试获取今日订单 ===");
+        java.util.Date today = new java.util.Date();
+        System.out.println("当前日期: " + today);
+
         System.out.println("\n========== 测试完成 ==========");
     }
 }

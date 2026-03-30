@@ -80,4 +80,11 @@ public interface CheckinRecordService {
      * 获取入住记录详情（包含订单、房间、客人信息）
      */
     CheckinRecord getRecordDetail(int recordId);
+
+    /**
+     * 删除入住记录
+     * @param recordId 记录ID
+     * @return 影响的行数
+     */
+    int deleteRecord(int recordId);
 }

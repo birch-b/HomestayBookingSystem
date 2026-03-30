@@ -3,7 +3,9 @@ package com.booking.view;
 import com.booking.model.CheckinRecord;
 import com.booking.model.User;
 import com.booking.service.CheckinRecordService;
+import com.booking.service.ReservationService;
 import com.booking.service.impl.CheckinRecordServiceImpl;
+import com.booking.service.impl.ReservationServiceImpl;
 import com.booking.util.AppColors;
 
 import javax.swing.*;
@@ -19,11 +21,13 @@ public class TodayCheckInView extends JFrame {
 
     private User currentUser;
     private CheckinRecordService checkinRecordService;
+    private ReservationService reservationService;
     private List<CheckinRecord> checkinList;
 
     private JTable checkinTable;
     private DefaultTableModel tableModel;
     private JButton checkInButton;
+    private JButton deleteButton;
     private JButton refreshButton;
     private JButton backButton;
     private JLabel statsLabel;
@@ -31,6 +35,7 @@ public class TodayCheckInView extends JFrame {
     public TodayCheckInView(User user) {
         this.currentUser = user;
         this.checkinRecordService = new CheckinRecordServiceImpl();
+        this.reservationService = new ReservationServiceImpl();
         initUI();
         loadData();
     }
@@ -56,14 +61,17 @@ public class TodayCheckInView extends JFrame {
         buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
 
         checkInButton = new JButton("办理入住");
+        deleteButton = new JButton("删除记录");
         refreshButton = new JButton("刷新");
         backButton = new JButton("返回");
 
         styleButton(checkInButton);
+        styleButton(deleteButton);
         styleButton(refreshButton);
         styleButton(backButton);
 
         buttonPanel.add(checkInButton);
+        buttonPanel.add(deleteButton);
         buttonPanel.add(refreshButton);
         buttonPanel.add(backButton);
 
@@ -121,6 +129,7 @@ public class TodayCheckInView extends JFrame {
 
         // 事件监听
         checkInButton.addActionListener(e -> checkIn());
+        deleteButton.addActionListener(e -> deleteRecord());
         refreshButton.addActionListener(e -> loadData());
         backButton.addActionListener(e -> dispose());
     }
@@ -185,12 +194,31 @@ public class TodayCheckInView extends JFrame {
         }
 
         int recordId = (int) tableModel.getValueAt(row, 0);
+        Integer reservationId = null;
+        
+        // 尝试获取记录
         CheckinRecord record = checkinRecordService.getRecordById(recordId);
         
-        if (record.getActualCheckIn() != null) {
-            JOptionPane.showMessageDialog(this, "该记录已经办理入住", "提示", JOptionPane.WARNING_MESSAGE);
-            return;
+        if (record == null) {
+            // 对于临时记录，从表格中获取reservationId
+            Object reservationIdObj = tableModel.getValueAt(row, 1);
+            if (reservationIdObj instanceof Integer) {
+                reservationId = (Integer) reservationIdObj;
+            } else {
+                JOptionPane.showMessageDialog(this, "无法获取订单信息", "错误", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        } else {
+            // 对于已有记录，检查是否已经办理入住
+            if (record.getActualCheckIn() != null) {
+                JOptionPane.showMessageDialog(this, "该记录已经办理入住", "提示", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            reservationId = record.getReservationId();
         }
+        
+        // 创建final副本用于lambda表达式
+        final Integer finalReservationId = reservationId;
 
         // 创建办理入住对话框
         JDialog dialog = new JDialog(this, "办理入住", true);
@@ -277,7 +305,7 @@ public class TodayCheckInView extends JFrame {
                 int roomKeys = Integer.parseInt(roomKeysField.getText().trim());
                 String remarks = remarksArea.getText().trim();
                 
-                int result = checkinRecordService.checkIn(record.getReservationId(), deposit, roomKeys, remarks);
+                int result = checkinRecordService.checkIn(finalReservationId, deposit, roomKeys, remarks);
                 
                 if (result == 1) {
                     JOptionPane.showMessageDialog(dialog, "办理入住成功", "成功", JOptionPane.INFORMATION_MESSAGE);
@@ -299,5 +327,46 @@ public class TodayCheckInView extends JFrame {
         });
         
         dialog.setVisible(true);
+    }
+
+    /**
+     * 删除入住记录
+     */
+    private void deleteRecord() {
+        int row = checkinTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "请先选择一条记录", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int recordId = (int) tableModel.getValueAt(row, 0);
+        int reservationId = (int) tableModel.getValueAt(row, 1);
+        String status = (String) tableModel.getValueAt(row, 8);
+
+        // 确认删除
+        int confirm = JOptionPane.showConfirmDialog(this, 
+            "确定要删除这条入住记录吗？\n记录ID: " + recordId + "\n订单号: " + reservationId, 
+            "确认删除", 
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE);
+        
+        if (confirm == JOptionPane.YES_OPTION) {
+            // 1. 删除入住记录
+            int result = checkinRecordService.deleteRecord(recordId);
+            
+            if (result > 0) {
+                // 2. 更新订单状态为"已支付"（PAID）
+                boolean updateResult = reservationService.updateReservationStatus(reservationId, "PAID");
+                
+                if (updateResult) {
+                    JOptionPane.showMessageDialog(this, "删除成功！订单状态已重置为已支付", "成功", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "删除成功，但订单状态更新失败", "警告", JOptionPane.WARNING_MESSAGE);
+                }
+                loadData();
+            } else {
+                JOptionPane.showMessageDialog(this, "删除失败", "错误", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 }

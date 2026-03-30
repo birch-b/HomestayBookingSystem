@@ -76,4 +76,14 @@ List<Reservation> searchReservationsByDateRange(Integer homestayId, String statu
      * 计算订单总价（考虑定价规则）
      */
     double calculateTotalPrice(int roomId, Date checkIn, Date checkOut, int guestsCount);
+
+    /**
+     * 更新订单状态
+     * @param reservationId 订单ID
+     * @param status 新状态
+     * @return 是否成功
+     */
+    boolean updateReservationStatus(int reservationId, String status);
+    // 统计今日入住订单数
+    int countTodayOrders(int homestayId);
 }

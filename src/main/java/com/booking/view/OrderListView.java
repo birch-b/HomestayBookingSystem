@@ -126,6 +126,24 @@ public class OrderListView extends JFrame {
 
         backButton = new JButton("返回");
         styleButton(backButton);
+        
+        // 只有游客角色显示支付和取消按钮
+        if ("GUEST".equals(userRole)) {
+            JButton payButton = new JButton("支付");
+            JButton cancelButton = new JButton("取消");
+            
+            styleButton(payButton);
+            styleButton(cancelButton);
+            
+            buttonPanel.add(payButton);
+            buttonPanel.add(cancelButton);
+            
+            // 支付按钮事件
+            payButton.addActionListener(e -> payOrder());
+            // 取消按钮事件
+            cancelButton.addActionListener(e -> cancelOrder());
+        }
+        
         buttonPanel.add(backButton);
 
         // 合并顶部面板
@@ -441,6 +459,66 @@ public class OrderListView extends JFrame {
             }
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this, "请输入有效的页码", "提示", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    /**
+     * 支付订单
+     */
+    private void payOrder() {
+        int selectedRow = orderTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "请选择要支付的订单", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int reservationId = (int) tableModel.getValueAt(selectedRow, 0);
+        String status = (String) tableModel.getValueAt(selectedRow, 9);
+
+        if (!"待支付".equals(status)) {
+            JOptionPane.showMessageDialog(this, "只有待支付的订单才能进行支付", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this, "确定要支付该订单吗？", "确认支付", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            boolean success = reservationService.updateReservationStatus(reservationId, "PAID");
+            if (success) {
+                JOptionPane.showMessageDialog(this, "支付成功！", "成功", JOptionPane.INFORMATION_MESSAGE);
+                loadData();
+            } else {
+                JOptionPane.showMessageDialog(this, "支付失败，请重试", "错误", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    /**
+     * 取消订单
+     */
+    private void cancelOrder() {
+        int selectedRow = orderTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "请选择要取消的订单", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int reservationId = (int) tableModel.getValueAt(selectedRow, 0);
+        String status = (String) tableModel.getValueAt(selectedRow, 9);
+
+        if (!"待支付".equals(status)) {
+            JOptionPane.showMessageDialog(this, "只有待支付的订单才能取消", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this, "确定要取消该订单吗？", "确认取消", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            boolean success = reservationService.updateReservationStatus(reservationId, "CANCELLED");
+            if (success) {
+                JOptionPane.showMessageDialog(this, "取消成功！", "成功", JOptionPane.INFORMATION_MESSAGE);
+                loadData();
+            } else {
+                JOptionPane.showMessageDialog(this, "取消失败，请重试", "错误", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 }

@@ -88,14 +88,23 @@ public class GuestView extends MainView {
 
         // 适当输入框大小
         cityField = new JTextField(12);
-        JTextField dateField = new JTextField("2026-03-20", 12);
+        JTextField checkInField = new JTextField("2026-03-20", 8);
+        JTextField checkOutField = new JTextField("2026-03-21", 8);
         JTextField peopleField = new JTextField("2", 3);
 
         // 设置输入框字体大小
         Font inputFont = new Font("微软雅黑", Font.PLAIN, 14);
         cityField.setFont(inputFont);
-        dateField.setFont(inputFont);
+        checkInField.setFont(inputFont);
+        checkOutField.setFont(inputFont);
         peopleField.setFont(inputFont);
+
+        // 设置统一高度
+        int componentHeight = 30;
+        cityField.setPreferredSize(new Dimension(cityField.getPreferredSize().width, componentHeight));
+        checkInField.setPreferredSize(new Dimension(checkInField.getPreferredSize().width, componentHeight));
+        checkOutField.setPreferredSize(new Dimension(checkOutField.getPreferredSize().width, componentHeight));
+        peopleField.setPreferredSize(new Dimension(peopleField.getPreferredSize().width, componentHeight));
 
         JButton searchBtn = new JButton("搜索");
         // 搜索按钮样式 - 紫色主题
@@ -105,6 +114,7 @@ public class GuestView extends MainView {
         searchBtn.setFocusPainted(false);
         searchBtn.setBorder(BorderFactory.createEmptyBorder(8, 20, 8, 20));
         searchBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        searchBtn.setPreferredSize(new Dimension(80, componentHeight));
 
         // 添加悬停效果
         searchBtn.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -122,14 +132,19 @@ public class GuestView extends MainView {
                 JOptionPane.showMessageDialog(this, "请输入城市名称", "提示", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            searchHomestayByCity(city);
+            String checkInStr = checkInField.getText().trim();
+            String checkOutStr = checkOutField.getText().trim();
+            String peopleStr = peopleField.getText().trim();
+            searchHomestayByCity(city, checkInStr, checkOutStr, peopleStr);
         });
 
         if (width < 700) {
             searchPanel.add(new JLabel("城市:"));
             searchPanel.add(cityField);
-            searchPanel.add(new JLabel("日期:"));
-            searchPanel.add(dateField);
+            searchPanel.add(new JLabel("入住:"));
+            searchPanel.add(checkInField);
+            searchPanel.add(new JLabel("离店:"));
+            searchPanel.add(checkOutField);
             searchPanel.add(new JLabel("人数:"));
             searchPanel.add(peopleField);
             // 单独添加搜索按钮
@@ -141,8 +156,10 @@ public class GuestView extends MainView {
         } else {
             searchPanel.add(new JLabel("城市:"));
             searchPanel.add(cityField);
-            searchPanel.add(new JLabel("日期:"));
-            searchPanel.add(dateField);
+            searchPanel.add(new JLabel("入住:"));
+            searchPanel.add(checkInField);
+            searchPanel.add(new JLabel("离店:"));
+            searchPanel.add(checkOutField);
             searchPanel.add(new JLabel("人数:"));
             searchPanel.add(peopleField);
             searchPanel.add(searchBtn);
@@ -152,14 +169,14 @@ public class GuestView extends MainView {
         // ================= 快捷按钮 =================
         JPanel quickPanel = new JPanel();
         // 根据宽度调整按钮布局
-        int rows = 1;
+        int quickRows = 1;
         int cols = 4;
         if (width < 700) {
-            rows = 2;
+            quickRows = 2;
             cols = 2;
         }
         // 适当按钮间距
-        quickPanel.setLayout(new GridLayout(rows, cols, 15, 15));
+        quickPanel.setLayout(new GridLayout(quickRows, cols, 15, 15));
         quickPanel.setBackground(AppColors.LIGHT_PURPLE);
         // 适当外边距
         quickPanel.setBorder(BorderFactory.createEmptyBorder(15, padding, 15, padding));
@@ -209,13 +226,17 @@ public class GuestView extends MainView {
         if (width < 900) cardCols = 3;
         if (width < 700) cardCols = 2;
         if (width < 400) cardCols = 1;
+        
+        // 获取所有民宿
+        List<Homestay> list = homestayService.getTopRatedHomestays(8); // 获取更多民宿
+        int totalCards = list != null ? list.size() : 0;
+        int rows = (totalCards + cardCols - 1) / cardCols; // 计算需要的行数
+        
         // 适当卡片间距
-        recommendPanel.setLayout(new GridLayout(1, cardCols, 15, 15));
+        recommendPanel.setLayout(new GridLayout(rows, cardCols, 15, 15));
         recommendPanel.setBackground(AppColors.LIGHT_PURPLE);
         recommendPanel.setBorder(BorderFactory.createTitledBorder("推荐民宿"));
         recommendPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        List<Homestay> list = homestayService.getTopRatedHomestays(cardCols);
 
         if (list != null) {
             for (Homestay h : list) {
@@ -318,7 +339,7 @@ public class GuestView extends MainView {
         new HomestayListView(currentUser).setVisible(true);
     }
 
-    private void searchHomestayByCity(String city) {
+    private void searchHomestayByCity(String city, String checkIn, String checkOut, String people) {
         // 根据城市搜索民宿
         List<Homestay> homestays = homestayService.getHomestaysByCity(city, 1, 100);
         if (homestays == null || homestays.isEmpty()) {
@@ -330,7 +351,7 @@ public class GuestView extends MainView {
             cityField.setText("");
         } else {
             // 打开搜索结果页面
-            new HomestaySearchResultView(currentUser, city, homestays).setVisible(true);
+            new HomestaySearchResultView(currentUser, city, checkIn, checkOut, people, homestays).setVisible(true);
         }
     }
 
@@ -400,14 +421,7 @@ public class GuestView extends MainView {
         }
     }
 
-    private void openReservation() {
-        new ReservationView(currentUser).setVisible(true);
-    }
 
-    private void openSearchResult(String city, String date, String people) {
-        JOptionPane.showMessageDialog(this,
-                "搜索：" + city + " " + date + " " + people);
-    }
 
     private void openHomestayDetail(int id) {
         // 使用统一的民宿详情对话框

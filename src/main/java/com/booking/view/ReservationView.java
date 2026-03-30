@@ -36,6 +36,9 @@ public class ReservationView extends JFrame {
     private List<Integer> selectedRoomIds = new ArrayList<>();
     private List<String> selectedRoomInfos = new ArrayList<>();
     private Integer homestayId = null; // 民宿ID，用于过滤房间
+    private String checkInDate = null; // 入住日期
+    private String checkOutDate = null; // 离店日期
+    private String peopleCount = null; // 人数
 
     public ReservationView(User user) {
         this.currentUser = user;
@@ -48,6 +51,17 @@ public class ReservationView extends JFrame {
     public ReservationView(User user, int homestayId) {
         this.currentUser = user;
         this.homestayId = homestayId;
+        this.roomService = new com.booking.service.impl.RoomServiceImpl();
+        this.reservationService = new com.booking.service.impl.ReservationServiceImpl();
+        initUI();
+    }
+
+    public ReservationView(User user, int homestayId, String checkIn, String checkOut, String people) {
+        this.currentUser = user;
+        this.homestayId = homestayId;
+        this.checkInDate = checkIn;
+        this.checkOutDate = checkOut;
+        this.peopleCount = people;
         this.roomService = new com.booking.service.impl.RoomServiceImpl();
         this.reservationService = new com.booking.service.impl.ReservationServiceImpl();
         initUI();
@@ -107,7 +121,7 @@ public class ReservationView extends JFrame {
         checkInField = new JTextField(10);
         checkInField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
         checkInField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
-        checkInField.setText(getCurrentDate());
+        checkInField.setText(checkInDate != null ? checkInDate : getCurrentDate());
         searchPanel.add(checkInField, gbc);
 
         // 离店日期
@@ -121,7 +135,7 @@ public class ReservationView extends JFrame {
         checkOutField = new JTextField(10);
         checkOutField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
         checkOutField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
-        checkOutField.setText(getTomorrowDate());
+        checkOutField.setText(checkOutDate != null ? checkOutDate : getTomorrowDate());
         searchPanel.add(checkOutField, gbc);
 
         // 人数
@@ -135,7 +149,7 @@ public class ReservationView extends JFrame {
         peopleField = new JTextField(5);
         peopleField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
         peopleField.setBorder(BorderFactory.createLineBorder(AppColors.DARK_PURPLE));
-        peopleField.setText("2");
+        peopleField.setText(peopleCount != null ? peopleCount : "2");
         searchPanel.add(peopleField, gbc);
 
         // 搜索按钮
@@ -306,6 +320,12 @@ public class ReservationView extends JFrame {
 
   private void loadAvailableRooms() {
     tableModel.setRowCount(0);
+    
+    // 如果有日期范围参数，直接调用搜索方法
+    if (checkInDate != null && checkOutDate != null && peopleCount != null) {
+        searchRooms();
+        return;
+    }
     
     // 获取可用房间
     List<Room> availableRooms;
