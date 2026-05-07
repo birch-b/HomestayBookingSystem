@@ -38,6 +38,7 @@ public class ReviewView extends JFrame {
     private JButton replyButton; // 民宿主回复
     private JButton addButton; // 游客发表评价
     private JButton backButton;
+    private JButton toggleStatusButton; // 显示/隐藏评价
     private JTextArea replyArea;
     private JLabel statsLabel;
     
@@ -141,6 +142,13 @@ public class ReviewView extends JFrame {
         JButton deleteButton = new JButton("删除");
         styleButton(deleteButton);
         buttonPanel.add(deleteButton);
+
+        // 添加显示/隐藏按钮 (管理员和房东可见)
+        if ("ADMIN".equals(userRole) || "HOST".equals(userRole)) {
+            toggleStatusButton = new JButton("显示/隐藏");
+            styleButton(toggleStatusButton);
+            buttonPanel.add(toggleStatusButton);
+        }
 
         backButton = new JButton("返回");
         styleButton(backButton);
@@ -290,6 +298,10 @@ public class ReviewView extends JFrame {
         nextPageButton.addActionListener(e -> goToNextPage());
         lastPageButton.addActionListener(e -> goToLastPage());
         pageInput.addActionListener(e -> goToPage());
+
+        if (toggleStatusButton != null) {
+            toggleStatusButton.addActionListener(e -> toggleReviewStatus());
+        }
     }
 
     private void styleButton(JButton button) {
@@ -327,12 +339,13 @@ public class ReviewView extends JFrame {
         // 根据角色加载不同数据
         switch (userRole) {
             case "ADMIN":
-                // 管理员看所有评价（使用limit参数）
-                reviewList = reviewService.getLatestReviews(10);
+                // 管理员看所有评价（分页）
+                reviewList = reviewService.getAllReviews(currentPage, pageSize);
                 break;
             case "HOST":
-                // 民宿主看自己民宿的评价（分页）
-                reviewList = reviewService.getReviewsByHomestayId(targetId, currentPage, pageSize);
+                // 民宿主看自己所有民宿的评价（分页）
+                System.out.println("DEBUG targetId for HOST: " + targetId); // Temporary logging
+                reviewList = reviewService.getReviewsByHostId(targetId, currentPage, pageSize);
                 break;
             case "GUEST":
                 // 游客看自己的评价（分页）
@@ -424,10 +437,10 @@ public class ReviewView extends JFrame {
         // 根据角色获取不同数据后再筛选
         switch (userRole) {
             case "ADMIN":
-                searchResult = reviewService.getLatestReviews(100);
+                searchResult = reviewService.getAllReviews(1, 100);
                 break;
             case "HOST":
-                searchResult = reviewService.getReviewsByHomestayId(targetId, 1, 100);
+                searchResult = reviewService.getReviewsByHostId(targetId, 1, 100);
                 break;
             case "GUEST":
                 searchResult = reviewService.getReviewsByGuestId(targetId, 1, 100);
@@ -435,9 +448,6 @@ public class ReviewView extends JFrame {
         }
         
         if (searchResult != null) {
-            // 只显示状态为1（显示）的评价
-            searchResult.removeIf(r -> r.getStatus() != 1);
-            
             // 按评分筛选
             if (!"全部".equals(rating)) {
                 int ratingValue = Integer.parseInt(rating.substring(0, 1));
@@ -567,11 +577,12 @@ public class ReviewView extends JFrame {
         // 获取用户的所有订单
         List<Reservation> allOrders = reservationService.getUserReservations(targetId, 1, Integer.MAX_VALUE);
         
-        // 过滤出已完成的订单
+        // 过滤出可以评价的订单（已入住或已完成）
         List<Reservation> completedOrders = new ArrayList<>();
         if (allOrders != null) {
             for (Reservation order : allOrders) {
-                if ("COMPLETED".equals(order.getStatus())) {
+                String status = order.getStatus();
+                if ("COMPLETED".equals(status) || "CHECKED_IN".equals(status)) {
                     completedOrders.add(order);
                 }
             }
@@ -742,6 +753,37 @@ public class ReviewView extends JFrame {
                 loadData(); // 重新加载评价列表
             } else {
                 JOptionPane.showMessageDialog(this, "评价删除失败", "错误", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void toggleReviewStatus() {
+        int row = reviewTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "请先选择要操作的评价", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int reviewId = (int) tableModel.getValueAt(row, 0);
+        String statusText = (String) tableModel.getValueAt(row, "ADMIN".equals(userRole) ? 9 : 8); 
+        // Note: columns index might be tricky. Let's find it.
+        int statusColumnIndex = reviewTable.getColumnModel().getColumnIndex("状态");
+        statusText = (String) tableModel.getValueAt(row, statusColumnIndex);
+
+        int currentStatus = "显示".equals(statusText) ? 1 : 0;
+        int newStatus = currentStatus == 1 ? 0 : 1;
+        String action = newStatus == 1 ? "显示" : "隐藏";
+
+        int confirm = JOptionPane.showConfirmDialog(this, 
+            "确定要" + action + "这条评价吗？", "确认操作", JOptionPane.YES_NO_OPTION);
+        
+        if (confirm == JOptionPane.YES_OPTION) {
+            boolean success = reviewService.updateReviewStatus(reviewId, newStatus);
+            if (success) {
+                JOptionPane.showMessageDialog(this, "操作成功！", "成功", JOptionPane.INFORMATION_MESSAGE);
+                loadData();
+            } else {
+                JOptionPane.showMessageDialog(this, "操作失败", "错误", JOptionPane.ERROR_MESSAGE);
             }
         }
     }

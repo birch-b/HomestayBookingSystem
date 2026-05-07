@@ -5,8 +5,10 @@ import com.booking.model.Room;
 import com.booking.model.User;
 import com.booking.service.HomestayService;
 import com.booking.service.RoomService;
+import com.booking.service.UserService;
 import com.booking.service.impl.HomestayServiceImpl;
 import com.booking.service.impl.RoomServiceImpl;
+import com.booking.service.impl.UserServiceImpl;
 import com.booking.util.AppColors;
 
 import javax.swing.*;
@@ -21,6 +23,7 @@ public class HomestayManageView extends JFrame {
 
     private User currentUser;
     private HomestayService homestayService;
+    private UserService userService;
     private List<Homestay> homestayList;
 
     private JTable homestayTable;
@@ -48,6 +51,7 @@ public class HomestayManageView extends JFrame {
     public HomestayManageView(User user) {
         this.currentUser = user;
         this.homestayService = new HomestayServiceImpl();
+        this.userService = new UserServiceImpl();
         initUI();
         loadData();
     }
@@ -494,6 +498,36 @@ public class HomestayManageView extends JFrame {
         descriptionScrollPane.setPreferredSize(new Dimension(300, 80));
         formPanel.add(descriptionScrollPane, gbc);
         
+        // 民宿主选择（仅管理员可见）
+        final JComboBox<String> hostCombo;
+        final java.util.Map<String, User> hostMap;
+        if ("ADMIN".equals(currentUser.getRole())) {
+            gbc.gridx = 0;
+            gbc.gridy = 5;
+            gbc.gridwidth = 1;
+            formPanel.add(new JLabel("民宿主:"), gbc);
+            
+            gbc.gridx = 1;
+            gbc.gridwidth = 2;
+            List<User> users = userService.getAllUsers(1, 100);
+            DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+            hostMap = new java.util.HashMap<>();
+            for (User user : users) {
+                if ("HOST".equals(user.getRole())) {
+                    String displayName = user.getRealName();
+                    model.addElement(displayName);
+                    hostMap.put(displayName, user);
+                }
+            }
+            hostCombo = new JComboBox<>(model);
+            hostCombo.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+            hostCombo.setPreferredSize(new Dimension(300, 25));
+            formPanel.add(hostCombo, gbc);
+        } else {
+            hostCombo = null;
+            hostMap = null;
+        }
+        
         // 按钮面板
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
@@ -550,7 +584,27 @@ public class HomestayManageView extends JFrame {
             newHomestay.setAddress(address);
             newHomestay.setPhone(phone);
             newHomestay.setDescription(description);
-            newHomestay.setHostId(currentUser.getUserId());
+            
+            // 设置民宿主
+            if ("ADMIN".equals(currentUser.getRole())) {
+                if (hostCombo != null && hostCombo.getSelectedItem() != null) {
+                    String selectedName = (String) hostCombo.getSelectedItem();
+                    User selectedHost = hostMap.get(selectedName);
+                    if (selectedHost != null) {
+                        newHomestay.setHostId(selectedHost.getUserId());
+                    } else {
+                        JOptionPane.showMessageDialog(dialog, "请选择民宿主", "提示", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(dialog, "请选择民宿主", "提示", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+            } else {
+                // 非管理员只能设置自己为民宿主
+                newHomestay.setHostId(currentUser.getUserId());
+            }
+            
             newHomestay.setStatus(1); // 默认营业状态
             newHomestay.setRating(0.0); // 初始评分
             
@@ -595,7 +649,7 @@ public class HomestayManageView extends JFrame {
             
             // 创建编辑民宿对话框
             JDialog dialog = new JDialog(this, "编辑民宿", true);
-            dialog.setSize(600, 500);
+            dialog.setSize(600, 550); // 增加高度以容纳新字段
             dialog.setLocationRelativeTo(this);
             
             // 主面板
@@ -693,6 +747,43 @@ public class HomestayManageView extends JFrame {
             statusCombo.setSelectedIndex(homestay.getStatus() == 1 ? 0 : 1);
             formPanel.add(statusCombo, gbc);
             
+            // 民宿主选择（仅管理员可见）
+            final JComboBox<String> hostCombo;
+            final java.util.Map<String, User> hostMap;
+            if ("ADMIN".equals(currentUser.getRole())) {
+                gbc.gridx = 0;
+                gbc.gridy = 6;
+                gbc.gridwidth = 1;
+                formPanel.add(new JLabel("民宿主:"), gbc);
+                
+                gbc.gridx = 1;
+                gbc.gridwidth = 2;
+                List<User> users = userService.getAllUsers(1, 100);
+                DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+                hostMap = new java.util.HashMap<>();
+                String currentHostName = null;
+                for (User user : users) {
+                    if ("HOST".equals(user.getRole())) {
+                        String displayName = user.getRealName();
+                        model.addElement(displayName);
+                        hostMap.put(displayName, user);
+                        if (user.getUserId() == homestay.getHostId()) {
+                            currentHostName = displayName;
+                        }
+                    }
+                }
+                hostCombo = new JComboBox<>(model);
+                hostCombo.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+                hostCombo.setPreferredSize(new Dimension(300, 25));
+                if (currentHostName != null) {
+                    hostCombo.setSelectedItem(currentHostName);
+                }
+                formPanel.add(hostCombo, gbc);
+            } else {
+                hostCombo = null;
+                hostMap = null;
+            }
+            
             // 按钮面板
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
             buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
@@ -750,6 +841,23 @@ public class HomestayManageView extends JFrame {
                 homestay.setPhone(phone);
                 homestay.setDescription(description);
                 homestay.setStatus(status);
+                
+                // 更新民宿主
+                if ("ADMIN".equals(currentUser.getRole())) {
+                    if (hostCombo != null && hostCombo.getSelectedItem() != null) {
+                        String selectedName = (String) hostCombo.getSelectedItem();
+                        User selectedHost = hostMap.get(selectedName);
+                        if (selectedHost != null) {
+                            homestay.setHostId(selectedHost.getUserId());
+                        } else {
+                            JOptionPane.showMessageDialog(dialog, "请选择民宿主", "提示", JOptionPane.WARNING_MESSAGE);
+                            return;
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(dialog, "请选择民宿主", "提示", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                }
                 
                 // 调用Service更新民宿
                 boolean success = homestayService.updateHomestay(homestay);

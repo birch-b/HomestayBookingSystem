@@ -79,16 +79,19 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     public boolean deleteReview(int reviewId) {
-        // 软删除：将状态设为0
+        return updateReviewStatus(reviewId, 0);
+    }
+
+    @Override
+    public boolean updateReviewStatus(int reviewId, int status) {
         Review review = reviewDAO.selectById(reviewId);
         if (review == null) {
             return false;
         }
-        review.setStatus(0);
+        review.setStatus(status);
         int result = reviewDAO.update(review);
 
         if (result > 0) {
-            // 更新民宿评分
             Reservation reservation = reservationDAO.selectById(review.getReservationId());
             if (reservation != null) {
                 updateHomestayRating(reservation.getRoomId());
@@ -107,13 +110,30 @@ public class ReviewServiceImpl implements ReviewService {
         return reviewDAO.selectByReservationId(reservationId);
     }
     /**
-     * 根据民宿ID查询所有评价
+     * 根据客人民宿ID查询所有评价
      */
     @Override
     public List<Review> getReviewsByHomestayId(int homestayId, int pageNum, int pageSize) {
         List<Review> allReviews = reviewDAO.selectByHomestayId(homestayId);
 
-        // 只显示状态为1（显示）的评价
+        int start = (pageNum - 1) * pageSize;
+        int end = Math.min(start + pageSize, allReviews.size());
+
+        if (start >= allReviews.size()) {
+            return new ArrayList<>();
+        }
+
+        return allReviews.subList(start, end);
+    }
+
+    @Override
+    public List<Review> getReviewsByHostId(int hostId, int pageNum, int pageSize) {
+        List<com.booking.model.Homestay> homestays = homestayDAO.selectByHostId(hostId);
+        List<Review> allReviews = new ArrayList<>();
+        for (com.booking.model.Homestay h : homestays) {
+            allReviews.addAll(reviewDAO.selectByHomestayId(h.getHomestayId()));
+        }
+
         List<Review> visibleReviews = new ArrayList<>();
         for (Review r : allReviews) {
             if (r.getStatus() == 1) {
@@ -130,6 +150,21 @@ public class ReviewServiceImpl implements ReviewService {
 
         return visibleReviews.subList(start, end);
     }
+
+    @Override
+    public List<Review> getAllReviews(int pageNum, int pageSize) {
+        List<Review> allReviews = reviewDAO.selectAll();
+        
+        int start = (pageNum - 1) * pageSize;
+        int end = Math.min(start + pageSize, allReviews.size());
+
+        if (start >= allReviews.size()) {
+            return new ArrayList<>();
+        }
+
+        return allReviews.subList(start, end);
+    }
+
     /**
      * 根据客人ID查询评价
      */
@@ -137,22 +172,14 @@ public class ReviewServiceImpl implements ReviewService {
     public List<Review> getReviewsByGuestId(int guestId, int pageNum, int pageSize) {
         List<Review> allReviews = reviewDAO.selectByGuestId(guestId);
 
-        // 只显示状态为1（显示）的评价
-        List<Review> visibleReviews = new ArrayList<>();
-        for (Review r : allReviews) {
-            if (r.getStatus() == 1) {
-                visibleReviews.add(r);
-            }
-        }
-
         int start = (pageNum - 1) * pageSize;
-        int end = Math.min(start + pageSize, visibleReviews.size());
+        int end = Math.min(start + pageSize, allReviews.size());
 
-        if (start >= visibleReviews.size()) {
+        if (start >= allReviews.size()) {
             return new ArrayList<>();
         }
 
-        return visibleReviews.subList(start, end);
+        return allReviews.subList(start, end);
     }
     /**
      * 查询最新评价（分页）

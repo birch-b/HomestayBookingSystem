@@ -27,10 +27,13 @@ public class TodayCheckInView extends JFrame {
     private JTable checkinTable;
     private DefaultTableModel tableModel;
     private JButton checkInButton;
+    private JButton checkOutButton;
     private JButton deleteButton;
     private JButton refreshButton;
     private JButton backButton;
+    private JButton toggleViewButton; // 切换今日/历史视图
     private JLabel statsLabel;
+    private boolean showHistory = false; // 是否显示历史记录
 
     public TodayCheckInView(User user) {
         this.currentUser = user;
@@ -61,18 +64,24 @@ public class TodayCheckInView extends JFrame {
         buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
 
         checkInButton = new JButton("办理入住");
+        checkOutButton = new JButton("办理退房");
         deleteButton = new JButton("删除记录");
         refreshButton = new JButton("刷新");
         backButton = new JButton("返回");
+        toggleViewButton = new JButton("查看历史");
 
         styleButton(checkInButton);
+        styleButton(checkOutButton);
         styleButton(deleteButton);
         styleButton(refreshButton);
         styleButton(backButton);
+        styleButton(toggleViewButton);
 
         buttonPanel.add(checkInButton);
+        buttonPanel.add(checkOutButton);
         buttonPanel.add(deleteButton);
         buttonPanel.add(refreshButton);
+        buttonPanel.add(toggleViewButton);
         buttonPanel.add(backButton);
 
         // 合并顶部面板
@@ -129,9 +138,11 @@ public class TodayCheckInView extends JFrame {
 
         // 事件监听
         checkInButton.addActionListener(e -> checkIn());
+        checkOutButton.addActionListener(e -> checkOut());
         deleteButton.addActionListener(e -> deleteRecord());
         refreshButton.addActionListener(e -> loadData());
         backButton.addActionListener(e -> dispose());
+        toggleViewButton.addActionListener(e -> toggleView());
     }
 
     private void styleButton(JButton button) {
@@ -155,27 +166,48 @@ public class TodayCheckInView extends JFrame {
     private void loadData() {
         tableModel.setRowCount(0);
         
-        // 获取今日入住记录
-        checkinList = checkinRecordService.getTodayCheckIn();
-        
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         
-        for (CheckinRecord record : checkinList) {
-            String status = record.getActualCheckIn() != null ? "已入住" : "待入住";
+        if (showHistory) {
+            // 获取所有已入住但未退房的历史记录
+            checkinList = checkinRecordService.getCheckedInRecords();
             
-            Object[] row = {
-                record.getRecordId(),
-                record.getReservation() != null ? record.getReservation().getReservationId() : "",
-                record.getGuest() != null ? record.getGuest().getRealName() : "",
-                record.getRoom() != null ? record.getRoom().getRoomNumber() : "",
-                record.getHomestay() != null ? record.getHomestay().getName() : "",
-                record.getReservation() != null && record.getReservation().getCheckInDate() != null ? 
-                    sdf.format(record.getReservation().getCheckInDate()) : "",
-                record.getActualCheckIn() != null ? sdf.format(record.getActualCheckIn()) : "",
-                record.getDeposit(),
-                status
-            };
-            tableModel.addRow(row);
+            for (CheckinRecord record : checkinList) {
+                Object[] row = {
+                    record.getRecordId(),
+                    record.getReservation() != null ? record.getReservation().getReservationId() : "",
+                    record.getGuest() != null ? record.getGuest().getRealName() : "",
+                    record.getRoom() != null ? record.getRoom().getRoomNumber() : "",
+                    record.getHomestay() != null ? record.getHomestay().getName() : "",
+                    record.getReservation() != null && record.getReservation().getCheckInDate() != null ? 
+                        sdf.format(record.getReservation().getCheckInDate()) : "",
+                    record.getActualCheckIn() != null ? sdf.format(record.getActualCheckIn()) : "",
+                    record.getDeposit(),
+                    "已入住"
+                };
+                tableModel.addRow(row);
+            }
+        } else {
+            // 获取今日入住记录
+            checkinList = checkinRecordService.getTodayCheckIn();
+            
+            for (CheckinRecord record : checkinList) {
+                String status = record.getActualCheckIn() != null ? "已入住" : "待入住";
+                
+                Object[] row = {
+                    record.getRecordId(),
+                    record.getReservation() != null ? record.getReservation().getReservationId() : "",
+                    record.getGuest() != null ? record.getGuest().getRealName() : "",
+                    record.getRoom() != null ? record.getRoom().getRoomNumber() : "",
+                    record.getHomestay() != null ? record.getHomestay().getName() : "",
+                    record.getReservation() != null && record.getReservation().getCheckInDate() != null ? 
+                        sdf.format(record.getReservation().getCheckInDate()) : "",
+                    record.getActualCheckIn() != null ? sdf.format(record.getActualCheckIn()) : "",
+                    record.getDeposit(),
+                    status
+                };
+                tableModel.addRow(row);
+            }
         }
         
         updateStats();
@@ -368,5 +400,113 @@ public class TodayCheckInView extends JFrame {
                 JOptionPane.showMessageDialog(this, "删除失败", "错误", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    /**
+     * 办理退房
+     */
+    private void checkOut() {
+        int row = checkinTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "请先选择一条记录", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int recordId = (int) tableModel.getValueAt(row, 0);
+        String status = (String) tableModel.getValueAt(row, 8);
+
+        // 检查是否已经入住
+        if (!"已入住".equals(status)) {
+            JOptionPane.showMessageDialog(this, "该记录尚未办理入住，无法退房", "提示", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // 创建退房对话框
+        JDialog dialog = new JDialog(this, "办理退房", true);
+        dialog.setSize(400, 250);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        mainPanel.setBackground(AppColors.LIGHT_PURPLE);
+
+        // 表单面板
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBackground(AppColors.LIGHT_PURPLE);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // 退还押金
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 1;
+        formPanel.add(new JLabel("退还押金:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridwidth = 2;
+        JTextField depositReturnField = new JTextField(10);
+        depositReturnField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        depositReturnField.setText("0.0");
+        formPanel.add(depositReturnField, gbc);
+
+        // 按钮面板
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
+
+        JButton confirmButton = new JButton("确认退房");
+        JButton cancelButton = new JButton("取消");
+
+        styleButton(confirmButton);
+        styleButton(cancelButton);
+
+        buttonPanel.add(confirmButton);
+        buttonPanel.add(cancelButton);
+
+        // 组装界面
+        mainPanel.add(formPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setContentPane(mainPanel);
+
+        // 确认按钮事件
+        confirmButton.addActionListener(e -> {
+            try {
+                double depositReturn = Double.parseDouble(depositReturnField.getText().trim());
+
+                // 调用退房服务
+                boolean result = checkinRecordService.checkOut(recordId, depositReturn);
+
+                if (result) {
+                    JOptionPane.showMessageDialog(dialog, "退房成功！订单状态已更新为已完成", "成功", JOptionPane.INFORMATION_MESSAGE);
+                    dialog.dispose();
+                    loadData();
+                } else {
+                    JOptionPane.showMessageDialog(dialog, "退房失败", "错误", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "请输入有效的数字", "提示", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+
+        // 取消按钮事件
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        dialog.setVisible(true);
+    }
+
+    /**
+     * 切换今日/历史视图
+     */
+    private void toggleView() {
+        showHistory = !showHistory;
+        if (showHistory) {
+            toggleViewButton.setText("查看今日");
+            setTitle("历史入住管理 - " + currentUser.getRealName());
+        } else {
+            toggleViewButton.setText("查看历史");
+            setTitle("今日入住管理 - " + currentUser.getRealName());
+        }
+        loadData();
     }
 }

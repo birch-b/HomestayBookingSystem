@@ -70,7 +70,7 @@ public class UserManageView extends JFrame {
         titleLabel.setForeground(Color.BLACK);
 
         // 搜索面板
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 5));
         searchPanel.setBackground(AppColors.LIGHT_PURPLE);
 
         JLabel keywordLabel = new JLabel("关键词:");
@@ -103,7 +103,7 @@ public class UserManageView extends JFrame {
         searchPanel.add(searchButton);
 
         // 按钮面板
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 5));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 5));
         buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
 
         addButton = new JButton("新增");
@@ -133,8 +133,8 @@ public class UserManageView extends JFrame {
         // 合并顶部面板
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBackground(AppColors.LIGHT_PURPLE);
-        topPanel.add(searchPanel, BorderLayout.WEST);
-        topPanel.add(buttonPanel, BorderLayout.EAST);
+        topPanel.add(searchPanel, BorderLayout.NORTH);
+        topPanel.add(buttonPanel, BorderLayout.CENTER);
 
         // 表格
         String[] columns = {"ID", "用户名", "真实姓名", "角色", "手机号", "邮箱", "状态", "创建时间"};
@@ -179,7 +179,7 @@ public class UserManageView extends JFrame {
         statsPanel.add(statsLabel);
         
         // 分页组件 - 保存分页组件的引用
-        JPanel paginationPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel paginationPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 5));
         paginationPanel.setBackground(AppColors.LIGHT_PURPLE);
         
         JButton firstPageButton = new JButton("首页");
@@ -282,10 +282,13 @@ public class UserManageView extends JFrame {
     private void styleButton(JButton button) {
         button.setFont(new Font("微软雅黑", Font.PLAIN, 12));
         button.setBackground(AppColors.BUTTON_PURPLE);
-        button.setForeground(AppColors.DARK_PURPLE);
+        button.setForeground(Color.BLACK);
         button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-        button.setPreferredSize(new Dimension(80, 22));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(AppColors.PRIMARY_PURPLE, 1, true),
+                BorderFactory.createEmptyBorder(5, 15, 5, 15)
+        ));
+        button.setPreferredSize(new Dimension(85, 28));
 
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {

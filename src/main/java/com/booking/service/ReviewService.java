@@ -25,6 +25,11 @@ public interface ReviewService {
     boolean deleteReview(int reviewId);
 
     /**
+     * 更新评价状态（显示/隐藏）
+     */
+    boolean updateReviewStatus(int reviewId, int status);
+
+    /**
      * 根据ID查询评价
      */
     Review getReviewById(int reviewId);
@@ -38,6 +43,16 @@ public interface ReviewService {
      * 查询民宿的所有评价（分页）
      */
     List<Review> getReviewsByHomestayId(int homestayId, int pageNum, int pageSize);
+
+    /**
+     * 查询房东的所有民宿的评价（分页）
+     */
+    List<Review> getReviewsByHostId(int hostId, int pageNum, int pageSize);
+
+    /**
+     * 查询所有评价（管理员使用）（分页）
+     */
+    List<Review> getAllReviews(int pageNum, int pageSize);
 
     /**
      * 查询用户的所有评价

@@ -371,6 +371,33 @@ public class CheckinRecordDAOImpl implements CheckinRecordDAO {
         }
     }
 
+    @Override
+    public List<CheckinRecord> selectCheckedInRecords() {
+        // 查询所有已入住（actual_check_in不为空）但未退房（actual_check_out为空）的记录
+        String sql = "SELECT * FROM checkin_records WHERE actual_check_in IS NOT NULL AND actual_check_out IS NULL ORDER BY actual_check_in DESC";
+        List<CheckinRecord> list = new ArrayList<>();
+        Connection conn;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DBUtil.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                list.add(extractCheckinRecordFromResultSet(rs));
+            }
+            return list;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return list;
+        } finally {
+            DBUtil.closeResultSet(rs);
+            if (pstmt != null) DBUtil.closeStatement(pstmt);
+        }
+    }
+
     // ==================== 工具方法 ====================
 
     private CheckinRecord extractCheckinRecordFromResultSet(ResultSet rs) throws SQLException {

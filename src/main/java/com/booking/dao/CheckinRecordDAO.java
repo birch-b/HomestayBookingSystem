@@ -37,4 +37,9 @@ public interface CheckinRecordDAO extends BaseDAO<CheckinRecord> {
      * 更新退房信息（退押金等）
      */
     int updateCheckOut(int recordId, double depositReturn);
+
+    /**
+     * 查询所有已入住但未退房的记录
+     */
+    List<CheckinRecord> selectCheckedInRecords();
 }

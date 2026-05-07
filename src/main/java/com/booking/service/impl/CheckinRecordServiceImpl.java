@@ -342,4 +342,36 @@ public List<CheckinRecord> getTodayCheckIn() {
     public int deleteRecord(int recordId) {
         return checkinRecordDAO.deleteById(recordId);
     }
+
+    @Override
+    public List<CheckinRecord> getCheckedInRecords() {
+        // 查询所有已入住但未退房的记录
+        List<CheckinRecord> records = checkinRecordDAO.selectCheckedInRecords();
+        List<CheckinRecord> result = new ArrayList<>();
+
+        for (CheckinRecord record : records) {
+            // 获取预订信息
+            Reservation reservation = reservationDAO.selectById(record.getReservationId());
+            if (reservation != null) {
+                record.setReservation(reservation);
+
+                // 获取客人信息
+                User guest = userDAO.selectById(reservation.getGuestId());
+                record.setGuest(guest);
+
+                // 获取房间信息
+                Room room = roomDAO.selectById(reservation.getRoomId());
+                if (room != null) {
+                    record.setRoom(room);
+
+                    // 获取民宿信息
+                    Homestay homestay = homestayDAO.selectById(room.getHomestayId());
+                    record.setHomestay(homestay);
+                }
+            }
+            result.add(record);
+        }
+
+        return result;
+    }
 }

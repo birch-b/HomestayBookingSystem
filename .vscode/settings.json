@@ -1,3 +1,10 @@
 {
-    "kiroAgent.configureMCP": "Disabled"
+    "kiroAgent.configureMCP": "Disabled",
+    "kiroAgent.customInstructions": "Always respond in Simplified Chinese. Explain everything in detailed Chinese.",
+    "kiroAgent.language": "zh-CN",
+    "java.project.sourcePaths": ["src/main/java"],
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar"
+    ],
+    "java.project.outputPath": "bin"
 }

@@ -178,15 +178,11 @@ private void refreshTodayOrderCount() {
     }
 
     private void openOrderList() {
-        if (hostHomestayId == -1) {
-            JOptionPane.showMessageDialog(this, "请先创建民宿");
-        } else {
-            new OrderListView(currentUser, "HOST", hostHomestayId).setVisible(true);
-        }
+        new OrderListView(currentUser, "HOST", currentUser.getUserId()).setVisible(true);
     }
 
     private void openPendingReply() {
-        new ReviewView(currentUser, "HOST", hostHomestayId).setVisible(true);
+        new ReviewView(currentUser, "HOST", currentUser.getUserId()).setVisible(true);
     }
 
     private void openMonthIncome() {

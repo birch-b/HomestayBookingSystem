@@ -87,4 +87,9 @@ public interface CheckinRecordService {
      * @return 影响的行数
      */
     int deleteRecord(int recordId);
+
+    /**
+     * 查询所有已入住但未退房的记录（包含历史记录）
+     */
+    List<CheckinRecord> getCheckedInRecords();
 }
