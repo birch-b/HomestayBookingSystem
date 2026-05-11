@@ -108,6 +108,7 @@ public class UserManageView extends JFrame {
         buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
 
         addButton = new JButton("新增");
+        JButton batchAddButton = new JButton("批量添加");
         editButton = new JButton("编辑");
         deleteButton = new JButton("删除");
         enableButton = new JButton("启用");
@@ -116,6 +117,7 @@ public class UserManageView extends JFrame {
         backButton = new JButton("返回");
 
         styleButton(addButton);
+        styleButton(batchAddButton);
         styleButton(editButton);
         styleButton(deleteButton);
         styleButton(enableButton);
@@ -124,6 +126,7 @@ public class UserManageView extends JFrame {
         styleButton(backButton);
 
         buttonPanel.add(addButton);
+        buttonPanel.add(batchAddButton);
         buttonPanel.add(editButton);
         buttonPanel.add(deleteButton);
         buttonPanel.add(enableButton);
@@ -231,6 +234,7 @@ public class UserManageView extends JFrame {
         // 添加事件监听
         searchButton.addActionListener(e -> searchUsers());
         addButton.addActionListener(e -> addUser());
+        batchAddButton.addActionListener(e -> batchAddUsers());
         editButton.addActionListener(e -> editUser());
         deleteButton.addActionListener(e -> deleteUser());
         enableButton.addActionListener(e -> enableUser());
@@ -942,5 +946,158 @@ public class UserManageView extends JFrame {
                 JOptionPane.showMessageDialog(this, "操作失败", "错误", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    private void batchAddUsers() {
+        JDialog dialog = new JDialog(this, "批量添加用户", true);
+        dialog.setSize(500, 400);
+        dialog.setLocationRelativeTo(this);
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        mainPanel.setBackground(AppColors.LIGHT_PURPLE);
+
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setBackground(AppColors.LIGHT_PURPLE);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 10, 10, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 1;
+        formPanel.add(new JLabel("添加数量:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridwidth = 2;
+        JTextField countField = new JTextField(10);
+        countField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        countField.setPreferredSize(new Dimension(150, 25));
+        countField.setText("5");
+        formPanel.add(countField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
+        formPanel.add(new JLabel("用户角色:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridwidth = 2;
+        String[] rolesCN = {"管理员", "民宿主", "游客"};
+        JComboBox<String> roleCombo = new JComboBox<>(rolesCN);
+        roleCombo.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        roleCombo.setPreferredSize(new Dimension(150, 25));
+        roleCombo.setSelectedIndex(0);
+        formPanel.add(roleCombo, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 1;
+        formPanel.add(new JLabel("基础用户名:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridwidth = 2;
+        JTextField baseUsernameField = new JTextField(20);
+        baseUsernameField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        baseUsernameField.setPreferredSize(new Dimension(150, 25));
+        baseUsernameField.setText("admin");
+        formPanel.add(baseUsernameField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 1;
+        formPanel.add(new JLabel("统一密码:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridwidth = 2;
+        JPasswordField passwordField = new JPasswordField(20);
+        passwordField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        passwordField.setPreferredSize(new Dimension(150, 25));
+        passwordField.setText("123456");
+        formPanel.add(passwordField, gbc);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonPanel.setBackground(AppColors.LIGHT_PURPLE);
+
+        JButton saveButton = new JButton("批量添加");
+        JButton cancelButton = new JButton("取消");
+
+        styleButton(saveButton);
+        styleButton(cancelButton);
+
+        buttonPanel.add(saveButton);
+        buttonPanel.add(cancelButton);
+
+        mainPanel.add(formPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setContentPane(mainPanel);
+
+        saveButton.addActionListener(e -> {
+            try {
+                int count = Integer.parseInt(countField.getText().trim());
+                if (count <= 0 || count > 100) {
+                    JOptionPane.showMessageDialog(dialog, "添加数量必须在1-100之间", "提示", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                String baseUsername = baseUsernameField.getText().trim();
+                if (baseUsername.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, "请输入基础用户名", "提示", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                String password = new String(passwordField.getPassword());
+                if (password.length() < 6) {
+                    JOptionPane.showMessageDialog(dialog, "密码长度至少6位", "提示", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                String roleCN = (String) roleCombo.getSelectedItem();
+                String[] rolesCNAdd = {"管理员", "民宿主", "游客"};
+                String[] rolesENAdd = {"ADMIN", "HOST", "GUEST"};
+                String role = "GUEST";
+                for (int i = 0; i < rolesCNAdd.length; i++) {
+                    if (rolesCNAdd[i].equals(roleCN)) {
+                        role = rolesENAdd[i];
+                        break;
+                    }
+                }
+
+                int successCount = 0;
+                int failCount = 0;
+
+                for (int i = 1; i <= count; i++) {
+                    User user = new User();
+                    user.setUsername(baseUsername + i);
+                    user.setPassword(password);
+                    user.setRealName("用户" + i);
+                    user.setRole(role);
+                    user.setPhone("1380000" + String.format("%04d", i));
+                    user.setEmail(baseUsername + i + "@example.com");
+                    user.setStatus(1);
+
+                    int result = userService.register(user);
+                    if (result > 0) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                }
+
+                JOptionPane.showMessageDialog(dialog, 
+                    String.format("批量添加完成！\n成功: %d 个\n失败: %d 个", successCount, failCount), 
+                    "批量添加结果", JOptionPane.INFORMATION_MESSAGE);
+                dialog.dispose();
+                loadData();
+
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "请输入有效的数量", "提示", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        dialog.setVisible(true);
     }
 }
