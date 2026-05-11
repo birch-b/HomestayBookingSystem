@@ -7,6 +7,7 @@ import com.booking.service.ReservationService;
 import com.booking.service.impl.UserServiceImpl;
 import com.booking.service.impl.ReservationServiceImpl;
 import com.booking.util.AppColors;
+import com.booking.util.MD5Util;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -823,9 +824,9 @@ public class UserManageView extends JFrame {
                 user.setPhone(phone);
                 user.setEmail(email);
                 
-                // 如果密码不为空，更新密码
+                // 如果密码不为空，更新密码（需要加密）
                 if (!password.isEmpty()) {
-                    user.setPassword(password);
+                    user.setPassword(MD5Util.md5(password));
                 }
                 
                 // 调用Service更新用户

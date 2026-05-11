@@ -142,7 +142,7 @@ public class OrderListView extends JFrame {
         northPanel.add(toolbar, BorderLayout.SOUTH);
 
         // --- 中间表格 ---
-        String[] columns = {"ID", "订单号", "入住人", "联系电话", "入住日期", "离店日期", "人数", "总金额", "状态", "下单时间"};
+        String[] columns = {"订单号", "入住人", "联系电话", "入住日期", "离店日期", "人数", "总金额", "状态", "下单时间"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
@@ -282,7 +282,6 @@ public class OrderListView extends JFrame {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             for (Reservation r : pageList) {
                 tableModel.addRow(new Object[]{
-                        r.getReservationId(),
                         r.getReservationNo(),
                         r.getGuestName(),
                         r.getGuestPhone(),
@@ -291,7 +290,8 @@ public class OrderListView extends JFrame {
                         r.getGuestsCount(),
                         String.format("%.2f", r.getTotalPrice()),
                         getStatusDisplay(r.getStatus()),
-                        r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : "-"
+                        r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : "-",
+                        r.getReservationId() // 隐藏列：用于内部获取订单ID
                 });
             }
         }
@@ -387,13 +387,13 @@ public class OrderListView extends JFrame {
             JOptionPane.showMessageDialog(this, "请先选择一个待支付的订单");
             return;
         }
-        String status = (String) tableModel.getValueAt(row, 8);
+        String status = (String) tableModel.getValueAt(row, 7);
         if (!"待支付".equals(status)) {
             JOptionPane.showMessageDialog(this, "只有[待支付]状态的订单可以执行此操作");
             return;
         }
 
-        int id = (int) tableModel.getValueAt(row, 0);
+        int id = (int) tableModel.getValueAt(row, 8);
         int choice = JOptionPane.showConfirmDialog(this, "确认支付该订单吗？", "支付确认", JOptionPane.YES_NO_OPTION);
         if (choice == JOptionPane.YES_OPTION) {
             if (reservationService.updateReservationStatus(id, "PAID")) {
@@ -409,13 +409,13 @@ public class OrderListView extends JFrame {
             JOptionPane.showMessageDialog(this, "请选择要取消的订单");
             return;
         }
-        String status = (String) tableModel.getValueAt(row, 8);
+        String status = (String) tableModel.getValueAt(row, 7);
         if (!"待支付".equals(status) && !"已支付".equals(status)) {
             JOptionPane.showMessageDialog(this, "该状态下的订单无法直接取消，请联系房东");
             return;
         }
 
-        int id = (int) tableModel.getValueAt(row, 0);
+        int id = (int) tableModel.getValueAt(row, 8);
         int choice = JOptionPane.showConfirmDialog(this, "确定要取消此订单吗？", "取消确认", JOptionPane.YES_NO_OPTION);
         if (choice == JOptionPane.YES_OPTION) {
             if (reservationService.updateReservationStatus(id, "CANCELLED")) {

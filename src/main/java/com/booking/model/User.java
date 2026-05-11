@@ -7,7 +7,8 @@ public class User {
  */
     private int userId;           // 用户ID
     private String username;       // 用户名
-    private String password;       // 密码
+    private String password;       // 密码（加密后）
+    private String salt;           // 盐值（用于密码加密）
     private String role;           // 角色：ADMIN/HOST/GUEST
     private String realName;       // 真实姓名
     private String phone;          // 手机号
@@ -50,6 +51,12 @@ public class User {
     }
     public void setPassword(String password) {
         this.password = password;
+    }
+    public String getSalt() {
+        return salt;
+    }
+    public void setSalt(String salt) {
+        this.salt = salt;
     }
     public String getRole() {
         return role;

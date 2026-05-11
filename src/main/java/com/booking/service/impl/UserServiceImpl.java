@@ -5,6 +5,7 @@ import com.booking.dao.impl.UserDAOImpl;
 import com.booking.model.User;
 import com.booking.service.UserService;
 import com.booking.util.MD5Util;
+import com.booking.util.PasswordUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,8 +34,12 @@ public class UserServiceImpl implements UserService {
             return -1;  // 用户名已存在
         }
 
-        // 2. 密码加密
-        user.setPassword(MD5Util.md5(user.getPassword()));
+        // 2. 生成盐值并进行二次哈希加密
+        String salt = PasswordUtil.generateSalt();
+        String hashedPassword = PasswordUtil.hashPassword(user.getPassword(), salt);
+        
+        user.setPassword(hashedPassword);
+        user.setSalt(salt);
 
         // 3. 设置默认值
         if (user.getStatus() == 0) {
@@ -48,15 +53,34 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User login(String username, String password) {
-        // 密码加密后验证
-        String encryptedPwd = MD5Util.md5(password);
-        User user = userDAO.login(username, encryptedPwd);
+        // 先获取用户（包含盐值）
+        User user = userDAO.selectByUsername(username);
+        
+        // 用户不存在或已禁用
+        if (user == null || user.getStatus() != 1) {
+            return null;
+        }
+
+        // 使用盐值验证密码（支持新旧两种加密方式）
+        boolean passwordValid = false;
+        String storedPassword = user.getPassword();
+        String salt = user.getSalt();
+        
+        if (salt != null && !salt.isEmpty()) {
+            // 新的带盐值加密方式
+            passwordValid = PasswordUtil.verifyPassword(password, storedPassword, salt);
+        } else {
+            // 兼容旧的MD5加密方式
+            passwordValid = MD5Util.verify(password, storedPassword);
+        }
 
         // 登录成功，更新最后登录时间
-        if (user != null) {
+        if (passwordValid) {
             userDAO.updateLastLoginTime(user.getUserId());
+            return user;
         }
-        return user;
+        
+        return null;
     }
 
     @Override
@@ -76,11 +100,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean updateUser(User user) {
-        // 如果密码不为空，需要加密
-        if (user.getPassword() != null && !user.getPassword().isEmpty()) {
-            user.setPassword(MD5Util.md5(user.getPassword()));
-        }
-
         int result = userDAO.update(user);
         return result > 0;
     }
@@ -187,14 +206,27 @@ public class UserServiceImpl implements UserService {
             return false;
         }
 
-        // 2. 验证旧密码
-        String encryptedOld = MD5Util.md5(oldPassword);
-        if (!encryptedOld.equals(user.getPassword())) {
+        // 2. 验证旧密码（支持新旧两种加密方式）
+        boolean oldPasswordValid = false;
+        String storedPassword = user.getPassword();
+        String salt = user.getSalt();
+        
+        if (salt != null && !salt.isEmpty()) {
+            oldPasswordValid = PasswordUtil.verifyPassword(oldPassword, storedPassword, salt);
+        } else {
+            oldPasswordValid = MD5Util.verify(oldPassword, storedPassword);
+        }
+        
+        if (!oldPasswordValid) {
             return false;  // 旧密码错误
         }
 
-        // 3. 设置新密码
-        user.setPassword(MD5Util.md5(newPassword));
+        // 3. 设置新密码（使用新的带盐值加密方式）
+        String newSalt = PasswordUtil.generateSalt();
+        String hashedNewPassword = PasswordUtil.hashPassword(newPassword, newSalt);
+        user.setPassword(hashedNewPassword);
+        user.setSalt(newSalt);
+        
         int result = userDAO.update(user);
         return result > 0;
     }
@@ -206,7 +238,12 @@ public class UserServiceImpl implements UserService {
             return false;
         }
 
-        user.setPassword(MD5Util.md5(newPassword));
+        // 使用带盐值的二次哈希加密
+        String salt = PasswordUtil.generateSalt();
+        String hashedPassword = PasswordUtil.hashPassword(newPassword, salt);
+        user.setPassword(hashedPassword);
+        user.setSalt(salt);
+        
         int result = userDAO.update(user);
         return result > 0;
     }

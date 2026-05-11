@@ -20,6 +20,7 @@ public class LoginView extends JFrame {
     private JPasswordField passwordField;
     private JButton loginButton;
     private JButton exitButton;
+    private JButton registerButton;
     public LoginView() {
         this.userService = new UserServiceImpl();
         initUI();
@@ -33,7 +34,7 @@ public class LoginView extends JFrame {
     private void initUI() {
         // 设置窗口基本属性
         setTitle("乡村旅游精品民宿预订与评价系统");
-        setSize(500, 300);
+        setSize(500, 330);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
@@ -153,10 +154,54 @@ public class LoginView extends JFrame {
             }
         });
 
+        // 注册提示标签（链接式按钮）
+        JPanel registerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        registerPanel.setBackground(AppColors.LIGHT_PURPLE);
+        
+        JLabel tipLabel = new JLabel("还没有账号？");
+        tipLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        tipLabel.setForeground(AppColors.DARK_PURPLE);
+        
+        JButton registerLinkButton = new JButton("点击注册");
+        registerLinkButton.setPreferredSize(new Dimension(90, 30));
+        registerLinkButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        registerLinkButton.setBackground(AppColors.BUTTON_PURPLE);
+        registerLinkButton.setForeground(AppColors.DARK_PURPLE);
+        registerLinkButton.setFocusPainted(false);
+        registerLinkButton.setBorder(BorderFactory.createEmptyBorder());
+        registerLinkButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        registerLinkButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                registerLinkButton.setBackground(AppColors.HOVER_PURPLE);
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                registerLinkButton.setBackground(AppColors.BUTTON_PURPLE);
+            }
+        });
+
+        registerLinkButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                setVisible(false);
+                RegisterView.showRegisterDialog(LoginView.this);
+                setVisible(true);
+            }
+        });
+
+        registerPanel.add(tipLabel);
+        registerPanel.add(registerLinkButton);
+
+        // 创建底部面板（包含按钮和注册提示）
+        JPanel bottomPanel = new JPanel(new BorderLayout(10, 10));
+        bottomPanel.setBackground(AppColors.LIGHT_PURPLE);
+        bottomPanel.add(buttonPanel, BorderLayout.NORTH);
+        bottomPanel.add(registerPanel, BorderLayout.SOUTH);
+
         // 组装界面
         mainPanel.add(titleLabel, BorderLayout.NORTH);
         mainPanel.add(formPanel, BorderLayout.CENTER);
-        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
         add(mainPanel);
 

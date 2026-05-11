@@ -17,8 +17,8 @@ public class UserDAOImpl implements UserDAO {
 
     @Override
     public int insert(User user) {
-        String sql = "INSERT INTO users (username, password, role, real_name, phone, email, status) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO users (username, password, salt, role, real_name, phone, email, status) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         Connection conn;
         PreparedStatement stmt = null;
         ResultSet rs = null;
@@ -29,11 +29,12 @@ public class UserDAOImpl implements UserDAO {
 
             stmt.setString(1, user.getUsername());
             stmt.setString(2, user.getPassword());
-            stmt.setString(3, user.getRole());
-            stmt.setString(4, user.getRealName());
-            stmt.setString(5, user.getPhone());
-            stmt.setString(6, user.getEmail());
-            stmt.setInt(7, user.getStatus());
+            stmt.setString(3, user.getSalt());
+            stmt.setString(4, user.getRole());
+            stmt.setString(5, user.getRealName());
+            stmt.setString(6, user.getPhone());
+            stmt.setString(7, user.getEmail());
+            stmt.setInt(8, user.getStatus());
 
             int affectedRows = stmt.executeUpdate();
 
@@ -75,7 +76,7 @@ public class UserDAOImpl implements UserDAO {
 
     @Override
     public int update(User user) {
-        String sql = "UPDATE users SET username=?, password=?, role=?, real_name=?, " +
+        String sql = "UPDATE users SET username=?, password=?, salt=?, role=?, real_name=?, " +
                 "phone=?, email=?, status=? WHERE user_id=?";
         Connection conn;
         PreparedStatement pstmt = null;
@@ -86,12 +87,13 @@ public class UserDAOImpl implements UserDAO {
 
             pstmt.setString(1, user.getUsername());
             pstmt.setString(2, user.getPassword());
-            pstmt.setString(3, user.getRole());
-            pstmt.setString(4, user.getRealName());
-            pstmt.setString(5, user.getPhone());
-            pstmt.setString(6, user.getEmail());
-            pstmt.setInt(7, user.getStatus());
-            pstmt.setInt(8, user.getUserId());
+            pstmt.setString(3, user.getSalt());
+            pstmt.setString(4, user.getRole());
+            pstmt.setString(5, user.getRealName());
+            pstmt.setString(6, user.getPhone());
+            pstmt.setString(7, user.getEmail());
+            pstmt.setInt(8, user.getStatus());
+            pstmt.setInt(9, user.getUserId());
 
             return pstmt.executeUpdate();
         } catch (SQLException e) {
@@ -459,6 +461,7 @@ public class UserDAOImpl implements UserDAO {
         user.setUserId(rs.getInt("user_id"));
         user.setUsername(rs.getString("username"));
         user.setPassword(rs.getString("password"));
+        user.setSalt(rs.getString("salt"));
         user.setRole(rs.getString("role"));
         user.setRealName(rs.getString("real_name"));
         user.setPhone(rs.getString("phone"));

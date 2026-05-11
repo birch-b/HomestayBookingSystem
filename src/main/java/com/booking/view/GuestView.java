@@ -388,14 +388,9 @@ public class GuestView extends MainView {
         gbc.gridy = 2;
         mainPanel.add(emailLabel, gbc);
         
-        JLabel userIdLabel = new JLabel("用户ID：" + currentUser.getUserId());
-        userIdLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        gbc.gridy = 3;
-        mainPanel.add(userIdLabel, gbc);
-        
         JLabel roleLabel = new JLabel("角色：" + getRoleName(currentUser.getRole()));
         roleLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        gbc.gridy = 4;
+        gbc.gridy = 3;
         mainPanel.add(roleLabel, gbc);
         
         // 添加关闭按钮
@@ -403,7 +398,7 @@ public class GuestView extends MainView {
         closeBtn.setFont(new Font("微软雅黑", Font.BOLD, 14));
         closeBtn.addActionListener(e -> dialog.dispose());
         
-        gbc.gridy = 5;
+        gbc.gridy = 4;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
         mainPanel.add(closeBtn, gbc);

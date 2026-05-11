@@ -3,11 +3,21 @@ package com.booking.view;
 import com.booking.model.Review;
 import com.booking.model.User;
 import com.booking.model.Reservation;
+import com.booking.model.Room;
+import com.booking.model.Homestay;
 import com.booking.service.ReviewService;
 import com.booking.service.ReservationService;
 import com.booking.service.impl.ReviewServiceImpl;
 import com.booking.service.impl.ReservationServiceImpl;
 import com.booking.util.AppColors;
+import com.booking.dao.ReviewDAO;
+import com.booking.dao.RoomDAO;
+import com.booking.dao.HomestayDAO;
+import com.booking.dao.UserDAO;
+import com.booking.dao.impl.ReviewDAOImpl;
+import com.booking.dao.impl.RoomDAOImpl;
+import com.booking.dao.impl.HomestayDAOImpl;
+import com.booking.dao.impl.UserDAOImpl;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -161,11 +171,11 @@ public class ReviewView extends JFrame {
         topPanel.add(buttonPanel, BorderLayout.EAST);
 
         // 表格
-        String[] columns = {"评价ID", "订单号", "民宿", "房间", "客人", "评分", "评价内容", "房东回复", "评价时间", "状态"};
+        String[] columns = {"订单号", "民宿", "房间", "客人", "评分", "评价内容", "房东回复", "评价时间", "状态"};
         if ("HOST".equals(userRole)) {
-            columns = new String[]{"评价ID", "订单号", "房间", "客人", "评分", "评价内容", "房东回复", "评价时间", "状态"};
+            columns = new String[]{"订单号", "房间", "客人", "评分", "评价内容", "房东回复", "评价时间", "状态"};
         } else if ("GUEST".equals(userRole)) {
-            columns = new String[]{"评价ID", "订单号", "民宿", "房间", "评分", "评价内容", "房东回复", "评价时间", "状态"};
+            columns = new String[]{"订单号", "民宿", "房间", "评分", "评价内容", "房东回复", "评价时间", "状态"};
         }
 
         tableModel = new DefaultTableModel(columns, 0) {
@@ -358,45 +368,75 @@ public class ReviewView extends JFrame {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 
         for (Review r : reviewList) {
+            // 获取预订信息、民宿信息、房间信息、用户信息
+            String orderNo = "订单" + r.getReservationId();
+            String homestayName = "民宿" + r.getReservationId();
+            String roomNo = "房间" + r.getReservationId();
+            String guestName = "用户" + r.getGuestId();
+
+            try {
+                Reservation res = reservationService.getReservationDetail(r.getReservationId());
+                if (res != null) {
+                    orderNo = res.getReservationNo();
+                    
+                    Room room = new RoomDAOImpl().selectById(res.getRoomId());
+                    if (room != null) {
+                        roomNo = room.getRoomNumber();
+                        
+                        Homestay homestay = new HomestayDAOImpl().selectById(room.getHomestayId());
+                        if (homestay != null) {
+                            homestayName = homestay.getName();
+                        }
+                    }
+                    
+                    User guest = new UserDAOImpl().selectById(r.getGuestId());
+                    if (guest != null) {
+                        guestName = guest.getRealName();
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
             // 根据角色不同，表格列不同
             if ("ADMIN".equals(userRole)) {
                 Object[] row = {
-                    r.getReviewId(),
-                    "订单" + r.getReservationId(), // 需要改进：获取真实订单号
-                    "民宿" + r.getReservationId(), // 需要改进：获取真实民宿名
-                    "房间" + r.getReservationId(), // 需要改进：获取真实房间号
-                    "用户" + r.getGuestId(),       // 需要改进：获取真实用户名
+                    orderNo,
+                    homestayName,
+                    roomNo,
+                    guestName,
                     r.getRating(),
                     r.getComment(),
                     r.getHostReply() != null ? r.getHostReply() : "",
                     r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : "",
-                    getStatusName(r.getStatus())   // 修复：传入 int
+                    getStatusName(r.getStatus()),   // 修复：传入 int
+                    r.getReviewId() // 隐藏列：用于内部获取评价ID
                 };
                 tableModel.addRow(row);
             } else if ("HOST".equals(userRole)) {
                 Object[] row = {
-                    r.getReviewId(),
-                    "订单" + r.getReservationId(),
-                    "房间" + r.getReservationId(),
-                    "用户" + r.getGuestId(),
+                    orderNo,
+                    roomNo,
+                    guestName,
                     r.getRating(),
                     r.getComment(),
                     r.getHostReply() != null ? r.getHostReply() : "",
                     r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : "",
-                    getStatusName(r.getStatus())   // 修复：传入 int
+                    getStatusName(r.getStatus()),   // 修复：传入 int
+                    r.getReviewId() // 隐藏列：用于内部获取评价ID
                 };
                 tableModel.addRow(row);
             } else if ("GUEST".equals(userRole)) {
                 Object[] row = {
-                    r.getReviewId(),
-                    "订单" + r.getReservationId(),
-                    "民宿" + r.getReservationId(),
-                    "房间" + r.getReservationId(),
+                    orderNo,
+                    homestayName,
+                    roomNo,
                     r.getRating(),
                     r.getComment(),
                     r.getHostReply() != null ? r.getHostReply() : "",
                     r.getCreateTime() != null ? sdf.format(r.getCreateTime()) : "",
-                    getStatusName(r.getStatus())   // 修复：传入 int
+                    getStatusName(r.getStatus()),   // 修复：传入 int
+                    r.getReviewId() // 隐藏列：用于内部获取评价ID
                 };
                 tableModel.addRow(row);
             }
@@ -558,7 +598,7 @@ public class ReviewView extends JFrame {
             return;
         }
 
-        int reviewId = (int) tableModel.getValueAt(row, 0);
+        int reviewId = (int) tableModel.getValueAt(row, "ADMIN".equals(userRole) ? 9 : 8);
         
         // 调用Service保存回复
         boolean success = reviewService.replyReview(reviewId, reply);
@@ -743,7 +783,7 @@ public class ReviewView extends JFrame {
             return;
         }
         
-        int reviewId = (int) tableModel.getValueAt(row, 0);
+        int reviewId = (int) tableModel.getValueAt(row, "ADMIN".equals(userRole) ? 9 : 8);
         
         int confirm = JOptionPane.showConfirmDialog(this, "确定要删除这条评价吗？", "确认删除", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
@@ -764,8 +804,8 @@ public class ReviewView extends JFrame {
             return;
         }
 
-        int reviewId = (int) tableModel.getValueAt(row, 0);
-        String statusText = (String) tableModel.getValueAt(row, "ADMIN".equals(userRole) ? 9 : 8); 
+        int reviewId = (int) tableModel.getValueAt(row, "ADMIN".equals(userRole) ? 9 : 8);
+        String statusText = (String) tableModel.getValueAt(row, "ADMIN".equals(userRole) ? 8 : 7); 
         // Note: columns index might be tricky. Let's find it.
         int statusColumnIndex = reviewTable.getColumnModel().getColumnIndex("状态");
         statusText = (String) tableModel.getValueAt(row, statusColumnIndex);
