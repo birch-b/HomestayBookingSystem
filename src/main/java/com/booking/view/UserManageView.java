@@ -950,7 +950,7 @@ public class UserManageView extends JFrame {
 
     private void batchAddUsers() {
         JDialog dialog = new JDialog(this, "批量添加用户", true);
-        dialog.setSize(500, 400);
+        dialog.setSize(550, 500);
         dialog.setLocationRelativeTo(this);
 
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
@@ -993,7 +993,21 @@ public class UserManageView extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.gridwidth = 1;
-        formPanel.add(new JLabel("基础用户名:"), gbc);
+        formPanel.add(new JLabel("用户名生成:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridwidth = 2;
+        String[] namePatterns = {"序号 (admin1, admin2)", "随机字母 (xy2a8)", "时间戳 (user_123456789)"};
+        JComboBox<String> patternCombo = new JComboBox<>(namePatterns);
+        patternCombo.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        patternCombo.setPreferredSize(new Dimension(280, 25));
+        patternCombo.setSelectedIndex(0);
+        formPanel.add(patternCombo, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 1;
+        formPanel.add(new JLabel("基础前缀:"), gbc);
 
         gbc.gridx = 1;
         gbc.gridwidth = 2;
@@ -1004,7 +1018,7 @@ public class UserManageView extends JFrame {
         formPanel.add(baseUsernameField, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 3;
+        gbc.gridy = 4;
         gbc.gridwidth = 1;
         formPanel.add(new JLabel("统一密码:"), gbc);
 
@@ -1041,9 +1055,9 @@ public class UserManageView extends JFrame {
                     return;
                 }
 
-                String baseUsername = baseUsernameField.getText().trim();
-                if (baseUsername.isEmpty()) {
-                    JOptionPane.showMessageDialog(dialog, "请输入基础用户名", "提示", JOptionPane.WARNING_MESSAGE);
+                String basePrefix = baseUsernameField.getText().trim();
+                if (basePrefix.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, "请输入基础前缀", "提示", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
 
@@ -1064,30 +1078,77 @@ public class UserManageView extends JFrame {
                     }
                 }
 
+                int patternIndex = patternCombo.getSelectedIndex();
                 int successCount = 0;
                 int failCount = 0;
+                int attemptCount = 0;
+                int maxAttempts = count * 10; // 最多尝试10倍数量来避免无限循环
 
-                for (int i = 1; i <= count; i++) {
+                List<String> generatedUsernames = new ArrayList<>(); // 记录已生成的用户名，避免重复
+
+                while (successCount < count && attemptCount < maxAttempts) {
+                    attemptCount++;
+                    
+                    // 生成用户名
+                    String username;
+                    switch (patternIndex) {
+                        case 1: // 随机字母
+                            username = generateRandomUsername(basePrefix, 5);
+                            break;
+                        case 2: // 时间戳
+                            username = basePrefix + "_" + System.currentTimeMillis() + "_" + attemptCount;
+                            break;
+                        default: // 序号（默认）
+                            username = basePrefix + (successCount + 1);
+                    }
+
+                    // 检查是否在本次生成中已重复
+                    if (generatedUsernames.contains(username)) {
+                        continue;
+                    }
+
+                    // 检查数据库中是否已存在该用户名
+                    User existingUser = null;
+                    try {
+                        existingUser = userService.getUserByUsername(username);
+                    } catch (Exception ex) {
+                        // 忽略查询异常，继续尝试
+                    }
+                    
+                    if (existingUser != null) {
+                        if (patternIndex == 0) { // 如果是序号模式遇到重复，改用随机模式
+                            username = generateRandomUsername(basePrefix, 5);
+                        } else {
+                            continue; // 其他模式则跳过本次尝试
+                        }
+                    }
+
+                    // 生成用户信息
                     User user = new User();
-                    user.setUsername(baseUsername + i);
+                    user.setUsername(username);
                     user.setPassword(password);
-                    user.setRealName("用户" + i);
+                    user.setRealName(basePrefix + (successCount + 1));
                     user.setRole(role);
-                    user.setPhone("1380000" + String.format("%04d", i));
-                    user.setEmail(baseUsername + i + "@example.com");
+                    user.setPhone("138" + String.format("%08d", (int)(Math.random() * 100000000)));
+                    user.setEmail(username + "@example.com");
                     user.setStatus(1);
 
+                    // 注册用户
                     int result = userService.register(user);
                     if (result > 0) {
                         successCount++;
+                        generatedUsernames.add(username);
                     } else {
                         failCount++;
                     }
                 }
 
-                JOptionPane.showMessageDialog(dialog, 
-                    String.format("批量添加完成！\n成功: %d 个\n失败: %d 个", successCount, failCount), 
-                    "批量添加结果", JOptionPane.INFORMATION_MESSAGE);
+                String message = String.format("批量添加完成！\n成功: %d 个\n失败: %d 个", successCount, failCount);
+                if (successCount < count) {
+                    message += "\n(部分用户因用户名冲突未生成)";
+                }
+                
+                JOptionPane.showMessageDialog(dialog, message, "批量添加结果", JOptionPane.INFORMATION_MESSAGE);
                 dialog.dispose();
                 loadData();
 
@@ -1099,5 +1160,21 @@ public class UserManageView extends JFrame {
         cancelButton.addActionListener(e -> dialog.dispose());
 
         dialog.setVisible(true);
+    }
+
+    /**
+     * 生成随机用户名
+     * @param prefix 前缀
+     * @param length 随机部分长度
+     * @return 生成的用户名
+     */
+    private String generateRandomUsername(String prefix, int length) {
+        String chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder sb = new StringBuilder(prefix);
+        java.util.Random random = new java.util.Random();
+        for (int i = 0; i < length; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 }
