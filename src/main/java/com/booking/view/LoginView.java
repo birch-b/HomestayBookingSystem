@@ -47,7 +47,7 @@ public class LoginView extends JFrame {
         // 标题
         JLabel titleLabel = new JLabel("民宿预订系统", JLabel.CENTER);
         titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 24));
-        titleLabel.setForeground(AppColors.PRIMARY_PURPLE);
+        titleLabel.setForeground(AppColors.TEXT_PRIMARY);
 
         // 表单面板
         JPanel formPanel = new JPanel(new GridBagLayout());
@@ -58,7 +58,7 @@ public class LoginView extends JFrame {
         // 用户名标签
         JLabel userLabel = new JLabel("用户名:");
         userLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        userLabel.setForeground(AppColors.PRIMARY_PURPLE);
+        userLabel.setForeground(AppColors.TEXT_LABEL);
 
         gbc.gridx = 0;
         gbc.gridy = 0;
@@ -79,7 +79,7 @@ public class LoginView extends JFrame {
         // 密码标签
         JLabel passLabel = new JLabel("密码:");
         passLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        passLabel.setForeground(AppColors.PRIMARY_PURPLE);
+        passLabel.setForeground(AppColors.TEXT_LABEL);
 
         gbc.gridx = 0;
         gbc.gridy = 1;
@@ -105,8 +105,8 @@ public class LoginView extends JFrame {
         loginButton = new JButton("登录");
         loginButton.setPreferredSize(new Dimension(100, 35));
         loginButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
-        loginButton.setBackground(Color.WHITE);
-        loginButton.setForeground(AppColors.PRIMARY_PURPLE);
+        loginButton.setBackground(AppColors.WHITE);
+        loginButton.setForeground(AppColors.TEXT_PRIMARY);
         loginButton.setFocusPainted(false);
         loginButton.setBorder(BorderFactory.createEmptyBorder());
 
@@ -123,8 +123,8 @@ public class LoginView extends JFrame {
         exitButton = new JButton("退出");
         exitButton.setPreferredSize(new Dimension(100, 35));
         exitButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
-        exitButton.setBackground(Color.WHITE);
-        exitButton.setForeground(AppColors.PRIMARY_PURPLE);
+        exitButton.setBackground(AppColors.WHITE);
+        exitButton.setForeground(AppColors.TEXT_PRIMARY);
         exitButton.setFocusPainted(false);
         exitButton.setBorder(BorderFactory.createLineBorder(AppColors.HOVER_PURPLE));
 
@@ -160,13 +160,13 @@ public class LoginView extends JFrame {
         
         JLabel tipLabel = new JLabel("还没有账号？");
         tipLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        tipLabel.setForeground(AppColors.DARK_PURPLE);
+        tipLabel.setForeground(AppColors.TEXT_SECONDARY);
         
-        JButton registerLinkButton = new JButton("点击注册");
+        registerLinkButton = new JButton("点击注册");
         registerLinkButton.setPreferredSize(new Dimension(90, 30));
         registerLinkButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
         registerLinkButton.setBackground(AppColors.BUTTON_PURPLE);
-        registerLinkButton.setForeground(AppColors.DARK_PURPLE);
+        registerLinkButton.setForeground(AppColors.TEXT_PRIMARY);
         registerLinkButton.setFocusPainted(false);
         registerLinkButton.setBorder(BorderFactory.createEmptyBorder());
         registerLinkButton.setCursor(new Cursor(Cursor.HAND_CURSOR));

@@ -45,7 +45,7 @@ public class RegisterView extends JDialog {
 
         JLabel titleLabel = new JLabel("用户注册", JLabel.CENTER);
         titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 22));
-        titleLabel.setForeground(AppColors.PRIMARY_PURPLE);
+        titleLabel.setForeground(AppColors.TEXT_PRIMARY);
 
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBackground(AppColors.LIGHT_PURPLE);
@@ -58,7 +58,7 @@ public class RegisterView extends JDialog {
         gbc.gridx = 0;
         gbc.gridy = row;
         gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(new JLabel("用户名:"), gbc);
+        formPanel.add(createLabel("用户名:"), gbc);
         gbc.gridx = 1;
         gbc.gridy = row++;
         gbc.anchor = GridBagConstraints.WEST;
@@ -72,7 +72,7 @@ public class RegisterView extends JDialog {
         gbc.gridy = row;
         gbc.anchor = GridBagConstraints.EAST;
         gbc.weightx = 0;
-        formPanel.add(new JLabel("密码:"), gbc);
+        formPanel.add(createLabel("密码:"), gbc);
         gbc.gridx = 1;
         gbc.gridy = row++;
         gbc.anchor = GridBagConstraints.WEST;
@@ -86,7 +86,7 @@ public class RegisterView extends JDialog {
         gbc.gridy = row;
         gbc.anchor = GridBagConstraints.EAST;
         gbc.weightx = 0;
-        formPanel.add(new JLabel("确认密码:"), gbc);
+        formPanel.add(createLabel("确认密码:"), gbc);
         gbc.gridx = 1;
         gbc.gridy = row++;
         gbc.anchor = GridBagConstraints.WEST;
@@ -100,7 +100,7 @@ public class RegisterView extends JDialog {
         gbc.gridy = row;
         gbc.anchor = GridBagConstraints.EAST;
         gbc.weightx = 0;
-        formPanel.add(new JLabel("真实姓名:"), gbc);
+        formPanel.add(createLabel("真实姓名:"), gbc);
         gbc.gridx = 1;
         gbc.gridy = row++;
         gbc.anchor = GridBagConstraints.WEST;
@@ -114,7 +114,7 @@ public class RegisterView extends JDialog {
         gbc.gridy = row;
         gbc.anchor = GridBagConstraints.EAST;
         gbc.weightx = 0;
-        formPanel.add(new JLabel("手机号:"), gbc);
+        formPanel.add(createLabel("手机号:"), gbc);
         gbc.gridx = 1;
         gbc.gridy = row++;
         gbc.anchor = GridBagConstraints.WEST;
@@ -128,7 +128,7 @@ public class RegisterView extends JDialog {
         gbc.gridy = row;
         gbc.anchor = GridBagConstraints.EAST;
         gbc.weightx = 0;
-        formPanel.add(new JLabel("邮箱:"), gbc);
+        formPanel.add(createLabel("邮箱:"), gbc);
         gbc.gridx = 1;
         gbc.gridy = row++;
         gbc.anchor = GridBagConstraints.WEST;
@@ -142,7 +142,7 @@ public class RegisterView extends JDialog {
         gbc.gridy = row;
         gbc.anchor = GridBagConstraints.EAST;
         gbc.weightx = 0;
-        formPanel.add(new JLabel("注册角色:"), gbc);
+        formPanel.add(createLabel("注册角色:"), gbc);
         gbc.gridx = 1;
         gbc.gridy = row++;
         gbc.anchor = GridBagConstraints.WEST;
@@ -160,7 +160,7 @@ public class RegisterView extends JDialog {
         registerButton.setPreferredSize(new Dimension(100, 35));
         registerButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
         registerButton.setBackground(AppColors.BUTTON_PURPLE);
-        registerButton.setForeground(AppColors.DARK_PURPLE);
+        registerButton.setForeground(AppColors.TEXT_PRIMARY);
         registerButton.setFocusPainted(false);
         registerButton.setBorder(BorderFactory.createEmptyBorder());
 
@@ -202,13 +202,13 @@ public class RegisterView extends JDialog {
         
         JLabel tipLabel = new JLabel("已经有账号？");
         tipLabel.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        tipLabel.setForeground(AppColors.DARK_PURPLE);
+        tipLabel.setForeground(AppColors.TEXT_SECONDARY);
         
-        JButton loginButton = new JButton("点击登录");
+        loginButton = new JButton("点击登录");
         loginButton.setPreferredSize(new Dimension(90, 30));
         loginButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
         loginButton.setBackground(AppColors.BUTTON_PURPLE);
-        loginButton.setForeground(AppColors.DARK_PURPLE);
+        loginButton.setForeground(AppColors.TEXT_PRIMARY);
         loginButton.setFocusPainted(false);
         loginButton.setBorder(BorderFactory.createEmptyBorder());
         loginButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -355,5 +355,12 @@ public class RegisterView extends JDialog {
                 new RegisterView(null).setVisible(true);
             }
         });
+    }
+
+    private JLabel createLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        label.setForeground(AppColors.TEXT_LABEL);
+        return label;
     }
 }
